@@ -1,0 +1,20 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+extract() {
+    local keycloak_home="$HOME/keycloak"
+
+    if [[ -n $(find "$keycloak_home" -mindepth 1 -print -quit) ]]; then
+        echo "$keycloak_home is not empty" >&2
+        exit 1
+    fi
+
+    cat /proc/sys/kernel/random/uuid >"$keycloak_home/admin_password.txt"
+
+    exec tar -xvf "$HOME/keycloak-22.0.1.tar.gz" -C "$keycloak_home" --strip-components=1
+}
+
+extract "$@"

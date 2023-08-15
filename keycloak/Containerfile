@@ -1,0 +1,27 @@
+FROM fedora:38
+
+RUN dnf update -y && dnf install -y \
+java-17-openjdk-devel \
+openssl \
+wget
+
+ARG USERNAME=keycloak
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME \
+&& useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+&& echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+&& chmod 0440 /etc/sudoers.d/$USERNAME
+
+RUN ln -s /certs/nsbox.crt /etc/pki/ca-trust/source/anchors/nsbox.local.pem
+
+USER $USERNAME
+WORKDIR /home/$USERNAME
+ENV KEYCLOAK_HOME="/home/keycloak/keycloak"
+ENV PATH="$PATH:$KEYCLOAK_HOME/bin"
+
+RUN wget https://github.com/keycloak/keycloak/releases/download/22.0.1/keycloak-22.0.1.tar.gz
+ADD extract /home/$USERNAME
+ADD init /home/$USERNAME
+ADD run /home/$USERNAME

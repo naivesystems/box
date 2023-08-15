@@ -1,0 +1,63 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+init() {
+    local realm="nsbox"
+    local admin="admin"
+    local hostname="nsbox.local"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            "--hostname")
+                shift
+                hostname="$1"
+                echo "Using hostname $hostname instead of nsbox.local"
+                ;;
+            *)
+                echo "Invalid option: $1" >&2
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    cd "$HOME"
+    export KEYCLOAK_HOME="$HOME/keycloak"
+    export PATH="$PATH:$KEYCLOAK_HOME/bin"
+
+    sudo update-ca-trust
+
+    kcadm.sh config credentials --server "https://$hostname:9992/" \
+        --realm master --user admin \
+        --password "$(cat "$KEYCLOAK_HOME/admin_password.txt")"
+
+    kcadm.sh create realms -s "realm=$realm" -s "enabled=true" -o
+
+    kcadm.sh create clients -r "$realm" -f - -o -F id,secret >"$KEYCLOAK_HOME/client_secret.json" <<EOF
+{
+  "clientId": "httpd",
+  "redirectUris": [
+    "https://$hostname:8443/*",
+    "https://$hostname:9441/*",
+    "https://$hostname:9442/*",
+    "https://$hostname:9443/*"
+  ],
+  "webOrigins": ["+"]
+}
+EOF
+
+    kcadm.sh create users -r "$realm" -f - <<EOF
+{
+  "username": "$admin",
+  "enabled": true
+}
+EOF
+
+    kcadm.sh set-password -r "$realm" --username "$admin" \
+        --new-password "admin" --temporary
+}
+
+init "$@"

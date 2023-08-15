@@ -1,0 +1,44 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+run() {
+    local hostname="nsbox.local"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            "--hostname")
+                shift
+                hostname="$1"
+                echo "Using hostname $hostname instead of nsbox.local"
+                ;;
+            *)
+                echo "Invalid option: $1" >&2
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    cd "$HOME"
+    openssl pkcs12 -export -in /certs/nsbox.crt -inkey /certs/nsbox.key \
+        -out nsbox.p12 -name "$hostname" -passout pass:changeit456
+    keytool -importkeystore -deststorepass changeit123 \
+        -destkeypass changeit123 -destkeystore nsbox.keystore \
+        -srckeystore nsbox.p12 -srcstoretype PKCS12 -srcstorepass changeit456 \
+        -alias "$hostname"
+
+    cd "$HOME/keycloak"
+    export KEYCLOAK_ADMIN="admin"
+    export KEYCLOAK_ADMIN_PASSWORD="$(cat "$HOME/keycloak/admin_password.txt")"
+    exec "$HOME/keycloak/bin/kc.sh" start \
+        --hostname="$hostname" --https-port=9992 --https-protocols=TLSv1.2 \
+        --https-key-store-file="$HOME/nsbox.keystore" \
+        --https-key-store-password=changeit123 \
+        --health-enabled=true \
+        --metrics-enabled=true
+}
+
+run "$@"
