@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"flag"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 )
 
 var workdir = flag.String("workdir", "", "Absolute path to the working directory")
@@ -51,6 +55,9 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigs
+		fmt.Println()
+		os.Stdout.Sync()
+		os.Stderr.Sync()
 		log.Printf("Received signal: %v", sig)
 		StopGerrit()
 		StopRedmine()
@@ -74,6 +81,7 @@ func exists(path string) bool {
 }
 
 func PodmanKill(name string) {
+	time.Sleep(1 * time.Second)
 	cmd := exec.Command("podman", "kill", name)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -81,4 +89,35 @@ func PodmanKill(name string) {
 	if err != nil {
 		log.Printf("podman kill %s: %v", name, err)
 	}
+}
+
+func RedirectPipes(cmd *exec.Cmd, prefix, color string) error {
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	RedirectPipe(stdout, prefix+"O: ", color)
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	RedirectPipe(stderr, prefix+"E: ", color)
+
+	return nil
+}
+
+func RedirectPipe(pipe io.ReadCloser, prefix, color string) {
+	go func() {
+		scanner := bufio.NewScanner(pipe)
+		for scanner.Scan() {
+			line := scanner.Text()
+			fmt.Printf("%s%s%s\033[0m\n", color, prefix, line)
+			os.Stdout.Sync()
+		}
+		err := scanner.Err()
+		if err != nil {
+			log.Printf("RedirectPipe: %s%v", prefix, err)
+		}
+	}()
 }

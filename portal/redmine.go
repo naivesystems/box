@@ -82,8 +82,10 @@ func PodmanRunRedmine(wait bool, args ...string) (*exec.Cmd, error) {
 	cmdArgs = append(cmdArgs, args...)
 
 	cmd := exec.Command("podman", cmdArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	err = RedirectPipes(cmd, "R", "\033[1;31m")
+	if err != nil {
+		return nil, fmt.Errorf("failed to redirect pipes: %v", err)
+	}
 	log.Printf("Executing %s", cmd.String())
 	if wait {
 		return cmd, cmd.Run()

@@ -75,8 +75,10 @@ func PodmanRunGerrit(wait bool, args ...string) (*exec.Cmd, error) {
 	cmdArgs = append(cmdArgs, args...)
 
 	cmd := exec.Command("podman", cmdArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	err := RedirectPipes(cmd, "G", "\033[1;32m")
+	if err != nil {
+		return nil, fmt.Errorf("failed to redirect pipes: %v", err)
+	}
 	log.Printf("Executing %s", cmd.String())
 	if wait {
 		return cmd, cmd.Run()
@@ -95,7 +97,7 @@ func StopGerrit() {
 
 func WaitGerritUp() {
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 		version, err := GetGerritVersion()
 		if version == "3.8.1" {
 			break

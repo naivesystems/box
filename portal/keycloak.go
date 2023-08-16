@@ -78,7 +78,7 @@ func GetKeycloakStatus() (string, error) {
 
 func WaitKeycloakUp() {
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 		status, err := GetKeycloakStatus()
 		if status == "UP" {
 			break
@@ -130,9 +130,11 @@ func RunKeycloak() {
 		"--add-host", *hostname+":127.0.0.1",
 		*keycloakImage,
 		"/home/keycloak/run", "--hostname", *hostname)
-	keycloakCmd.Stdout = os.Stdout
-	keycloakCmd.Stderr = os.Stderr
-	err := keycloakCmd.Start()
+	err := RedirectPipes(keycloakCmd, "K", "\033[1;33m")
+	if err != nil {
+		log.Fatalf("Failed to redirect pipes: %v", err)
+	}
+	err = keycloakCmd.Start()
 	if err != nil {
 		log.Fatalf("Failed to start Keycloak: %v", err)
 	}
