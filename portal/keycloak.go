@@ -24,7 +24,7 @@ func StartKeycloak() {
 	if err != nil {
 		log.Fatalf("os.MkdirAll(%s): %v", keycloakDir, err)
 	}
-	PodmanKillKeycloak()
+	PodmanKill("keycloak")
 	versionFile := filepath.Join(keycloakDir, "version.txt")
 	if exists(versionFile) {
 		RunKeycloak()
@@ -141,17 +141,7 @@ func RunKeycloak() {
 func StopKeycloak() {
 	err := keycloakCmd.Process.Signal(syscall.SIGTERM)
 	if err != nil {
-		log.Fatalf("Failed to stop Keycloak: %v", err)
+		log.Printf("Failed to stop Keycloak: %v", err)
 	}
-	PodmanKillKeycloak()
-}
-
-func PodmanKillKeycloak() {
-	cmd := exec.Command("podman", "kill", "keycloak")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		log.Printf("podman kill keycloak: %v", err)
-	}
+	PodmanKill("keycloak")
 }

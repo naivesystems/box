@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
@@ -30,12 +31,20 @@ func main() {
 	PrepareCerts()
 	StartKeycloak()
 
+	err := StartRedmine()
+	if err != nil {
+		log.Printf("Failed to start Redmine: %v", err)
+		StopKeycloak()
+		os.Exit(1)
+	}
+
 	sigs := make(chan os.Signal, 1)
 	// Ctrl-C triggers SIGINT. systemd is supposed to trigger SIGTERM.
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigs
 		log.Printf("Received signal: %v", sig)
+		StopRedmine()
 		StopKeycloak()
 		os.Exit(0)
 	}()
@@ -53,4 +62,14 @@ func exists(path string) bool {
 		log.Fatalf("os.Stat(%s): %v", path, err)
 	}
 	return true
+}
+
+func PodmanKill(name string) {
+	cmd := exec.Command("podman", "kill", name)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("podman kill %s: %v", name, err)
+	}
 }

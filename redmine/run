@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+run() {
+    cd "$HOME/redmine"
+    cp data/secret_token.rb config/initializers/
+    exec bundle exec rails server -e production --log-to-stdout -u puma \
+        -b "0.0.0.0" -p 3000
+}
+
+run "$@"

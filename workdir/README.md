@@ -16,16 +16,13 @@ Layout of the workdir:
     │   ├── themes
     │   └── version.txt
     ├── redmine
-    │   ├── app
-    │   ├── appveyor.yml
-    │   ├── bin
-    │   ├── config
-    │   ├── ...
-    │   ├── test
-    │   ├── tmp
-    │   ├── vendor
-    │   ├── yarn.lock
-    │   └── version.txt
+    │   ├── data
+    │   │   ├── admin_api_key.txt
+    │   │   ├── secret_token.rb
+    │   │   ├── production.sqlite3
+    │   │   └── version.txt
+    │   ├── files
+    │   └── log
     ├── gerrit
     │   ├── bin
     │   ├── cache

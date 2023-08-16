@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+init() {
+    cd "$HOME/redmine"
+    export RAILS_ENV=production
+    export REDMINE_LANG=en
+
+    echo "Generating secret token..."
+    bundle exec rake generate_secret_token
+    cp config/initializers/secret_token.rb data/
+
+    echo "Migrating the database..."
+    bundle exec rake db:migrate
+
+    echo "Loading default data..."
+    bundle exec rake redmine:load_default_data
+
+    echo "Exporting admin API key..."
+    bundle exec rake redmine:export_admin_api_key >data/admin_api_key.txt
+
+    echo "5.0.5" >data/version.txt
+}
+
+init "$@"

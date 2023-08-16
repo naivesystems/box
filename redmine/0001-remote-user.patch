@@ -1,0 +1,13 @@
+Index: app/controllers/application_controller.rb
+===================================================================
+--- app/controllers/application_controller.rb   (revision 21535)
++++ app/controllers/application_controller.rb   (working copy)
+@@ -123,6 +123,8 @@
+       elsif params[:format] == 'atom' && params[:key] && request.get? && accept_atom_auth?
+         # ATOM key authentication does not start a session
+         user = User.find_by_atom_key(params[:key])
++      elsif request.headers["X-Remote-User"].present?
++        user = User.find_by_login(request.headers["X-Remote-User"].to_s)
+       end
+     end
+     if user.nil? && Setting.rest_api_enabled? && accept_api_auth?
