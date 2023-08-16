@@ -29,6 +29,9 @@ Layout of the workdir:
     │   ├── data
     │   ├── db
     │   ├── etc
+    │   │   ├── ...
+    │   │   ├── gerrit.config
+    │   │   └── gerrit.config.bak
     │   ├── git
     │   ├── index
     │   ├── lib

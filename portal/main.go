@@ -38,12 +38,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = StartGerrit()
+	if err != nil {
+		log.Printf("Failed to start Gerrit: %v", err)
+		StopRedmine()
+		StopKeycloak()
+		os.Exit(1)
+	}
+
 	sigs := make(chan os.Signal, 1)
 	// Ctrl-C triggers SIGINT. systemd is supposed to trigger SIGTERM.
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigs
 		log.Printf("Received signal: %v", sig)
+		StopGerrit()
 		StopRedmine()
 		StopKeycloak()
 		os.Exit(0)

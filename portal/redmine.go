@@ -34,7 +34,7 @@ func StartRedmine() error {
 }
 
 func InitRedmine() error {
-	_, err := PodmanRunRedmine("/home/redmine/init")
+	_, err := PodmanRunRedmine(true, "/home/redmine/init")
 	if err != nil {
 		return fmt.Errorf("failed to initialize Redmine: %v", err)
 	}
@@ -42,7 +42,7 @@ func InitRedmine() error {
 }
 
 func RunRedmine() error {
-	cmd, err := PodmanRunRedmine("/home/redmine/run")
+	cmd, err := PodmanRunRedmine(false, "/home/redmine/run")
 	if err != nil {
 		return fmt.Errorf("failed to start Redmine: %v", err)
 	}
@@ -50,7 +50,7 @@ func RunRedmine() error {
 	return nil
 }
 
-func PodmanRunRedmine(args ...string) (*exec.Cmd, error) {
+func PodmanRunRedmine(wait bool, args ...string) (*exec.Cmd, error) {
 	dataDir := filepath.Join(*workdir, "redmine", "data")
 	err := os.MkdirAll(dataDir, 0700)
 	if err != nil {
@@ -85,7 +85,11 @@ func PodmanRunRedmine(args ...string) (*exec.Cmd, error) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	log.Printf("Executing %s", cmd.String())
-	return cmd, cmd.Run()
+	if wait {
+		return cmd, cmd.Run()
+	} else {
+		return cmd, cmd.Start()
+	}
 }
 
 func StopRedmine() {

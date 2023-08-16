@@ -1,0 +1,87 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+run() {
+    local hostname="nsbox.local"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            "--hostname")
+                shift
+                hostname="$1"
+                echo "Using hostname $hostname instead of nsbox.local"
+                ;;
+            *)
+                echo "Invalid option: $1" >&2
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    cd "$HOME"
+
+    cp review_site/etc/gerrit.config.bak review_site/etc/gerrit.config
+
+    git config -f review_site/etc/gerrit.config gerrit.canonicalWebUrl "https://$hostname:9442/"
+    git config -f review_site/etc/gerrit.config plugins.allowRemoteAdmin false
+    git config -f review_site/etc/gerrit.config auth.type HTTP
+    git config -f review_site/etc/gerrit.config auth.logoutUrl "/OIDCRedirectURI?logout=https%3A%2F%2F$hostname%3A9442%2F"
+    git config -f review_site/etc/gerrit.config auth.userNameToLowerCase true
+    git config -f review_site/etc/gerrit.config auth.httpHeader REMOTE_USER
+    git config -f review_site/etc/gerrit.config auth.enableRunAs false
+    git config -f review_site/etc/gerrit.config receive.timeout 15min
+    git config -f review_site/etc/gerrit.config receive.cancellationTimeout 1min
+    git config -f review_site/etc/gerrit.config receive.checkReferencedObjectsAreReachable false
+    git config -f review_site/etc/gerrit.config sendemail.enable false
+    git config -f review_site/etc/gerrit.config sshd.threads 16
+    git config -f review_site/etc/gerrit.config sshd.commandStartThreads 5
+    git config -f review_site/etc/gerrit.config httpd.listenUrl "proxy-https://0.0.0.0:8081/"
+    git config -f review_site/etc/gerrit.config httpd.minThreads 100
+    git config -f review_site/etc/gerrit.config httpd.maxThreads 100
+    git config -f review_site/etc/gerrit.config core.packedGitWindowSize 16k
+    git config -f review_site/etc/gerrit.config core.packedGitLimit 4g
+    git config -f review_site/etc/gerrit.config core.packedGitOpenFiles 2048
+    git config -f review_site/etc/gerrit.config pack.threads 3
+    git config -f review_site/etc/gerrit.config gc.interval "1 day"
+    git config -f review_site/etc/gerrit.config change.disablePrivateChanges true
+    git config -f review_site/etc/gerrit.config change.enableAttentionSet false
+    git config -f review_site/etc/gerrit.config change.enableAssignee false
+    git config -f review_site/etc/gerrit.config change.mergeabilityComputationBehavior NEVER
+    git config -f review_site/etc/gerrit.config change.conflictsPredicateEnabled false
+    git config -f review_site/etc/gerrit.config change.move false
+    git config -f review_site/etc/gerrit.config change.updateDelay 17
+    git config -f review_site/etc/gerrit.config download.command checkout
+    git config -f review_site/etc/gerrit.config --add download.command cherry_pick
+    git config -f review_site/etc/gerrit.config download.scheme ssh
+    git config -f review_site/etc/gerrit.config download.archive off
+
+    cat <<'EOF' | sed "s/HOSTNAME/$hostname/g" >>review_site/etc/gerrit.config
+[commentlink "change_id"]
+	match = (I[0-9a-f]{8,40})
+	link = "#/q/$1"
+[commentlink "b_link"]
+	match = (b/)(\\d+)
+	link = https://HOSTNAME:9441/issues/$2
+[commentlink "bug_link"]
+	match = "([Bb]ug\\s+#?)(\\d+)"
+	link = https://HOSTNAME:9441/issues/$2
+[commentlink "task_link"]
+	match = "([Tt]ask\\s+#?)(\\d+)"
+	link = https://HOSTNAME:9441/issues/$2
+[commentlink "issue_link"]
+	match = "([Ii]ssue\\s+#?)(\\d+)"
+	link = https://HOSTNAME:9441/issues/$2
+[commentlink "bug_id"]
+	match = (Bug-Id:\\s+)(\\d+)
+	html = $1<a href=\"https://HOSTNAME:9441/issues/$2\">$2</a>
+EOF
+
+    exec java -Xms8g -Xmx12g -jar "$HOME/review_site/bin/gerrit.war" daemon \
+        -d "$HOME/review_site"
+}
+
+run "$@"

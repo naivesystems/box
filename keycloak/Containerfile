@@ -1,7 +1,7 @@
 FROM fedora:38
 
 RUN dnf update -y && dnf install -y \
-java-17-openjdk-devel \
+java-17-openjdk-headless \
 openssl \
 wget
 

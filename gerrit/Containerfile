@@ -1,0 +1,22 @@
+FROM fedora:38
+
+RUN dnf update -y && dnf install -y \
+git \
+java-11-openjdk-headless \
+openssh \
+wget
+
+ARG USERNAME=gerrit
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME \
+&& useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+
+USER $USERNAME
+WORKDIR /home/$USERNAME
+
+RUN wget https://gerrit-releases.storage.googleapis.com/gerrit-3.8.1.war
+
+ADD init /home/$USERNAME
+ADD run /home/$USERNAME
