@@ -1,0 +1,41 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+run() {
+    local hostname="nsbox.local"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            "--hostname")
+                shift
+                hostname="$1"
+                echo "Using hostname $hostname instead of nsbox.local"
+                ;;
+            *)
+                echo "Invalid option: $1" >&2
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    update-ca-trust
+
+    # For talking to Keycloak
+    grep host.containers.internal /etc/hosts | sed "s/host.containers.internal/$hostname/" >>/etc/hosts
+    chown -R apache:apache /var/cache/httpd/mod_auth_openidc/metadata
+    sed -i "s@https://127.0.0.1:9992/@https://$hostname:9992/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
+
+    sed -i "s/HOSTNAME/$hostname/" /var/www/html/discover.html
+
+    cd /etc/httpd
+    sed -i "s/#ServerName www.example.com:80/ServerName $hostname:8080/" conf/httpd.conf
+    sed -i "s/#ServerName www.example.com:443/ServerName $hostname:8443/" conf.d/y8443ssl.conf
+    sed -i "s/localhost/$hostname/" conf.d/y8443ssl.conf
+    exec httpd -f $PWD/conf/httpd.conf -k start -DFOREGROUND
+}
+
+run "$@"

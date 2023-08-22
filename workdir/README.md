@@ -47,15 +47,7 @@ Layout of the workdir:
     │   └── version.txt
     ├── httpd
     │   ├── conf.d
-    │   │   ├── x0auth_openidc.conf
-    │   │   ├── y8080.conf
-    │   │   ├── y8443.conf
-    │   │   ├── z9441redmine.conf
-    │   │   ├── z9442gerrit.conf
-    │   │   └── z9443buildbot.conf
-    │   ├── html
-    │   │   ├── index.html
-    │   │   └── discover.html
+    │   │   └── x0auth_openidc.conf
     │   ├── logs
     │   │   ├── redmine_access_log
     │   │   ├── redmine_error_log
@@ -66,4 +58,9 @@ Layout of the workdir:
     │   ├── metadata
     │   │   ├── nsbox.local%3A9992%2Frealms%2Fnsbox.provider
     │   │   └── nsbox.local%3A9992%2Frealms%2Fnsbox.client
+    │   ├── sockets
+    │   │   ├── buildbot.sock
+    │   │   ├── gerrit.sock
+    │   │   ├── portal.sock
+    │   │   └── redmine.sock
     │   └── version.txt

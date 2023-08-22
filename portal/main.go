@@ -17,6 +17,7 @@ import (
 
 var workdir = flag.String("workdir", "", "Absolute path to the working directory")
 var hostname = flag.String("hostname", "nsbox.local", "")
+var bindIP = flag.String("bind", "127.0.0.1", "Address behind httpd reverse proxy")
 
 func main() {
 	flag.Parse()
@@ -50,6 +51,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = StartHttpd()
+	if err != nil {
+		log.Printf("Failed to start httpd: %v", err)
+		StopGerrit()
+		StopRedmine()
+		StopKeycloak()
+		os.Exit(1)
+	}
+
 	sigs := make(chan os.Signal, 1)
 	// Ctrl-C triggers SIGINT. systemd is supposed to trigger SIGTERM.
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -59,6 +69,7 @@ func main() {
 		os.Stdout.Sync()
 		os.Stderr.Sync()
 		log.Printf("Received signal: %v", sig)
+		StopHttpd()
 		StopGerrit()
 		StopRedmine()
 		StopKeycloak()
@@ -66,7 +77,7 @@ func main() {
 	}()
 
 	// TODO
-	log.Fatal(http.ListenAndServe("127.0.0.1:7777", nil))
+	log.Fatal(http.ListenAndServe(*bindIP+":7777", nil))
 }
 
 func exists(path string) bool {

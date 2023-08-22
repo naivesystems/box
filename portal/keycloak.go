@@ -16,6 +16,8 @@ import (
 
 var keycloakImage = flag.String("keycloak_image", "naive.systems/box/keycloak:dev", "")
 
+var keycloakHTTPSAddr = flag.String("keycloak_https_addr", "0.0.0.0:9992", "")
+
 var keycloakCmd *exec.Cmd
 
 func StartKeycloak() {
@@ -126,14 +128,15 @@ func RunKeycloak() {
 		"--userns=keep-id:uid=1000,gid=1000",
 		"-v", certsDir+":/certs",
 		"-v", keycloakDir+":/home/keycloak/keycloak",
-		"-p", "9992:9992/tcp",
+		"-p", *keycloakHTTPSAddr+":9992/tcp",
 		"--add-host", *hostname+":127.0.0.1",
 		*keycloakImage,
 		"/home/keycloak/run", "--hostname", *hostname)
-	err := RedirectPipes(keycloakCmd, "K", "\033[1;33m")
+	err := RedirectPipes(keycloakCmd, "K", "\033[0;33m")
 	if err != nil {
 		log.Fatalf("Failed to redirect pipes: %v", err)
 	}
+	log.Printf("Executing %s", keycloakCmd.String())
 	err = keycloakCmd.Start()
 	if err != nil {
 		log.Fatalf("Failed to start Keycloak: %v", err)

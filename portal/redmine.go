@@ -76,13 +76,13 @@ func PodmanRunRedmine(wait bool, args ...string) (*exec.Cmd, error) {
 		"-v", dataDir + ":/home/redmine/redmine/data",
 		"-v", filesDir + ":/home/redmine/redmine/files",
 		"-v", logDir + ":/home/redmine/redmine/log",
-		"-p", "0.0.0.0:3000:3000/tcp",
+		"-p", *bindIP + ":3000:3000/tcp",
 		*redmineImage,
 	}
 	cmdArgs = append(cmdArgs, args...)
 
 	cmd := exec.Command("podman", cmdArgs...)
-	err = RedirectPipes(cmd, "R", "\033[1;31m")
+	err = RedirectPipes(cmd, "R", "\033[0;31m")
 	if err != nil {
 		return nil, fmt.Errorf("failed to redirect pipes: %v", err)
 	}

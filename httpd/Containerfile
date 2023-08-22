@@ -1,0 +1,28 @@
+FROM fedora:38
+
+RUN dnf update -y && dnf install -y \
+httpd \
+mod_auth_openidc \
+mod_ssl
+
+RUN sed -i 's/^Listen 80$/Listen 8080/' /etc/httpd/conf/httpd.conf
+ADD y8080.conf /etc/httpd/conf.d
+ADD index.html /var/www/html
+
+RUN ln -s /certs/nsbox.crt /etc/pki/ca-trust/source/anchors/nsbox.local.pem
+
+RUN mv /etc/httpd/conf.d/ssl.conf /etc/httpd/conf.d/y8443ssl.conf
+RUN sed -i 's/^Listen 443 https$/Listen 8443 https/' /etc/httpd/conf.d/y8443ssl.conf
+RUN sed -i 's@<VirtualHost _default_:443>@<VirtualHost _default_:8443>\n\n<Location />\n  AuthType openid-connect\n  Require valid-user\n  RequestHeader set "X-Remote-User" "%{REMOTE_USER}s"\n</Location>\n<Location /discover.html>\n  AuthType None\n  Require all granted\n</Location>@' /etc/httpd/conf.d/y8443ssl.conf
+RUN sed -i 's@/etc/pki/tls/certs/localhost.crt@/certs/nsbox.crt@' /etc/httpd/conf.d/y8443ssl.conf
+RUN sed -i 's@/etc/pki/tls/private/localhost.key@/certs/nsbox.key@' /etc/httpd/conf.d/y8443ssl.conf
+RUN sed -i 's@</VirtualHost>@Header always set Strict-Transport-Security "max-age=0"\n</VirtualHost>@' /etc/httpd/conf.d/y8443ssl.conf
+
+RUN ln -s /mnt/conf.d/x0auth_openidc.conf /etc/httpd/conf.d
+ADD discover.html /var/www/html
+
+ADD z9441redmine.conf /etc/httpd/conf.d
+ADD z9442gerrit.conf /etc/httpd/conf.d
+ADD z9443buildbot.conf /etc/httpd/conf.d
+
+ADD run /usr/local/bin/run_httpd

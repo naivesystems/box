@@ -2,6 +2,8 @@ FROM fedora:37
 
 RUN dnf update -y && dnf install -y \
 @development-tools \
+ghostscript \
+ImageMagick \
 ruby \
 ruby-devel \
 sqlite-devel \

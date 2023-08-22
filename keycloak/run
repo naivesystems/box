@@ -39,6 +39,7 @@ run() {
         --https-key-store-password=changeit123 \
         --health-enabled=true \
         --metrics-enabled=true
+    # TODO: Update redirectUris if $hostname has changed
 }
 
 run "$@"

@@ -16,6 +16,8 @@ import (
 
 var gerritImage = flag.String("gerrit_image", "naive.systems/box/gerrit:dev", "")
 
+var gerritSSHAddr = flag.String("gerrit_ssh_addr", "0.0.0.0:29418", "")
+
 var gerritCmd *exec.Cmd
 
 func StartGerrit() error {
@@ -68,14 +70,14 @@ func PodmanRunGerrit(wait bool, args ...string) (*exec.Cmd, error) {
 		"--name", "gerrit", "--replace",
 		"--userns=keep-id:uid=1000,gid=1000",
 		"-v", gerritDir + ":/home/gerrit/review_site",
-		"-p", "0.0.0.0:8081:8081/tcp",
-		"-p", "0.0.0.0:29418:29418/tcp",
+		"-p", *bindIP + ":8081:8081/tcp",
+		"-p", *gerritSSHAddr + ":29418/tcp",
 		*gerritImage,
 	}
 	cmdArgs = append(cmdArgs, args...)
 
 	cmd := exec.Command("podman", cmdArgs...)
-	err := RedirectPipes(cmd, "G", "\033[1;32m")
+	err := RedirectPipes(cmd, "G", "\033[0;32m")
 	if err != nil {
 		return nil, fmt.Errorf("failed to redirect pipes: %v", err)
 	}
@@ -112,7 +114,7 @@ func WaitGerritUp() {
 }
 
 func GetGerritVersion() (string, error) {
-	url := "http://127.0.0.1:8081/config/server/version"
+	url := "http://" + *bindIP + ":8081/config/server/version"
 
 	// Make the HTTP request
 	resp, err := http.Get(url)
@@ -133,7 +135,7 @@ func GetGerritVersion() (string, error) {
 }
 
 func AddGerritUser(username string) error {
-	url := "http://127.0.0.1:8081/login/"
+	url := "http://" + *bindIP + ":8081/login/"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
