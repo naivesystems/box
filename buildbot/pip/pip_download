@@ -9,6 +9,7 @@ download() {
     source sandbox/bin/activate
     pip install --upgrade pip
     pip download -d /output 'buildbot[bundle]'
+    pip download -d /output 'buildbot-www-react'
     pip download -d /output 'txrequests'
 }
 

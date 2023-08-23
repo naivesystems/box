@@ -42,6 +42,9 @@ Layout of the workdir:
     │   └── version.txt
     ├── buildbot
     │   ├── sandbox
+    │   ├── ssh
+    │   │   ├── id_ed25519
+    │   │   └── id_ed25519.pub
     │   ├── master
     │   ├── worker
     │   └── version.txt

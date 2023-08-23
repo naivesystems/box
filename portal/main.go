@@ -51,9 +51,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = StartBuildbot()
+	if err != nil {
+		log.Printf("Failed to start Buildbot: %v", err)
+		StopGerrit()
+		StopRedmine()
+		StopKeycloak()
+		os.Exit(1)
+	}
+
 	err = StartHttpd()
 	if err != nil {
 		log.Printf("Failed to start httpd: %v", err)
+		StopBuildbot()
 		StopGerrit()
 		StopRedmine()
 		StopKeycloak()
@@ -70,6 +80,7 @@ func main() {
 		os.Stderr.Sync()
 		log.Printf("Received signal: %v", sig)
 		StopHttpd()
+		StopBuildbot()
 		StopGerrit()
 		StopRedmine()
 		StopKeycloak()

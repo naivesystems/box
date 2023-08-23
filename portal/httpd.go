@@ -144,6 +144,12 @@ OIDCRemoteUserClaim "preferred_username"
 	}
 
 	// Generate sockets
+	buildbotSock := filepath.Join(socketsDir, "buildbot.sock")
+	err = socat(buildbotSock, *bindIP+":8010")
+	if err != nil {
+		return err
+	}
+
 	gerritSock := filepath.Join(socketsDir, "gerrit.sock")
 	err = socat(gerritSock, *bindIP+":8081")
 	if err != nil {
