@@ -1,0 +1,3 @@
+FROM fedora:38
+
+ADD pip_download /usr/local/bin/pip_download

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+distro() {
+    podman build -f Containerfile.$1 -t naive.systems/box/buildbot/pip:download
+    podman run --rm -v $PWD/output:/output naive.systems/box/buildbot/pip:download /usr/local/bin/pip_download
+}
+
+run() {
+    cd "$(dirname "${BASH_SOURCE[0]}")"
+    mkdir -p output
+    distro fedora36
+    distro fedora37
+    distro fedora38
+    distro ubuntu2004
+    distro ubuntu2204
+}
+
+run "$@"

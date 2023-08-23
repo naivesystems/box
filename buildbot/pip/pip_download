@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+download() {
+    python3 -m venv sandbox
+    source sandbox/bin/activate
+    pip install --upgrade pip
+    pip download -d /output 'buildbot[bundle]'
+    pip download -d /output 'txrequests'
+}
+
+download "$@"
