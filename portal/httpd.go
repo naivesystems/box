@@ -235,7 +235,7 @@ func LoadHttpdClientSecret() (string, error) {
 }
 
 func WriteOpenIDConfiguration(path string) error {
-	// TODO should be using hostname instead of 127.0.0.1
+	// httpd/run uses sed to replace 127.0.0.1 with the actual hostname
 	url := "https://127.0.0.1:9992/realms/nsbox/.well-known/openid-configuration"
 
 	tr := &http.Transport{
