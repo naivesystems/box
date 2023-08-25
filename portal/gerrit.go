@@ -41,7 +41,9 @@ func StartGerrit() error {
 		return err
 	}
 	WaitGerritUp()
-	AddGerritUser("admin")
+	if err := AddGerritUser("admin"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -135,6 +137,8 @@ func GetGerritVersion() (string, error) {
 }
 
 func AddGerritUser(username string) error {
+	log.Printf("AddGerritUser('%s')", username)
+
 	url := "http://" + *bindIP + ":8081/login/"
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -145,8 +149,14 @@ func AddGerritUser(username string) error {
 	// Set the header
 	req.Header.Set("REMOTE_USER", username)
 
+	// Custom HTTP client with no redirects policy
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
 	// Send the request
-	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send request: %s", err)
@@ -165,5 +175,6 @@ func AddGerritUser(username string) error {
 		return fmt.Errorf("failed to read response body: %s", err)
 	}
 	log.Println(string(body))
+	log.Printf("AddGerritUser('%s') succeeded", username)
 	return nil
 }

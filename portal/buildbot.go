@@ -11,6 +11,7 @@ import (
 
 	"naive.systems/box/buildbot"
 	"naive.systems/box/buildbot/pip"
+	"naive.systems/box/portal/gerrit"
 )
 
 var bb *buildbot.Buildbot
@@ -29,6 +30,18 @@ func StartBuildbot() error {
 			return err
 		}
 		log.Printf("Buildbot has been successfully initialized.")
+	}
+
+	bb = buildbot.New()
+	bb.WorkDir = buildbotDir
+	bb.IdentityFile = filepath.Join(buildbotDir, "ssh", "id_ed25519")
+	bb.WorkersList = "worker,password"
+	bb.WWWProtocol = "https"
+	bb.WWWHost = *hostname
+	bb.PublicPort = 9443
+
+	if err := PrepareBuildbotAccountInGerrit(); err != nil {
+		return err
 	}
 	err = RunBuildbot()
 	if err != nil {
@@ -84,17 +97,39 @@ func InitBuildbot() error {
 	return nil
 }
 
+func PrepareBuildbotAccountInGerrit() error {
+	const username = "buildbot"
+
+	sshKey, err := bb.PublicKey()
+	if err != nil {
+		return fmt.Errorf("error loading public key: %w", err)
+	}
+
+	// Ensure the user exists
+	if err := AddGerritUser(username); err != nil {
+		return fmt.Errorf("error ensuring user exists: %w", err)
+	}
+
+	client := gerrit.NewClient("http://"+*bindIP+":8081", "admin")
+	if err := client.Login(); err != nil {
+		return fmt.Errorf("error logging into gerrit: %w", err)
+	}
+
+	// Add the user to the "Service Users" group
+	if err := client.AddMemberToGroup("Service Users", username); err != nil {
+		return fmt.Errorf("error adding user to group: %w", err)
+	}
+
+	// Ensure the user has the specified SSH key
+	if err := client.AddSSHKeyToAccount(username, sshKey); err != nil {
+		return fmt.Errorf("error ensuring SSH key is added: %w", err)
+	}
+
+	log.Println("Prepared buildbot account successfully")
+	return nil
+}
+
 func RunBuildbot() error {
-	buildbotDir := filepath.Join(*workdir, "buildbot")
-
-	bb = buildbot.New()
-	bb.WorkDir = buildbotDir
-	bb.IdentityFile = filepath.Join(buildbotDir, "ssh", "id_ed25519")
-	bb.WorkersList = "worker,password"
-	bb.WWWProtocol = "https"
-	bb.WWWHost = *hostname
-	bb.PublicPort = 9443
-
 	return bb.Start()
 }
 
