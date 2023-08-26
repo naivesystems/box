@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 )
 
@@ -20,6 +21,11 @@ var httpdImage = flag.String("httpd_image", "naive.systems/box/httpd:dev", "")
 var httpdCmd *exec.Cmd
 
 var socatCmds []*exec.Cmd
+
+var (
+	stopHttpd      bool
+	stopHttpdMutex sync.Mutex
+)
 
 func StartHttpd() error {
 	httpdDir := filepath.Join(*workdir, "httpd")
@@ -74,7 +80,6 @@ func InitHttpd() error {
 }
 
 func RunHttpd() error {
-	certsDir := filepath.Join(*workdir, "certs")
 	httpdDir := filepath.Join(*workdir, "httpd")
 	confDir := filepath.Join(httpdDir, "conf.d")
 	logsDir := filepath.Join(httpdDir, "logs")
@@ -161,11 +166,20 @@ OIDCRemoteUserClaim "preferred_username"
 	if err != nil {
 		return err
 	}
+	return PodmanRunHttpd()
+}
+
+func PodmanRunHttpd() error {
+	certsDir := filepath.Join(*workdir, "certs")
+	httpdDir := filepath.Join(*workdir, "httpd")
+	confDir := filepath.Join(httpdDir, "conf.d")
+	logsDir := filepath.Join(httpdDir, "logs")
+	metadataDir := filepath.Join(httpdDir, "metadata")
+	socketsDir := filepath.Join(httpdDir, "sockets")
 
 	// Start the container
 	httpdCmd = exec.Command("podman", "run", "--rm",
 		"--name", "httpd", "--replace",
-		// "--userns=keep-id:uid=1000,gid=1000",
 		"-v", certsDir+":/certs",
 		"-v", logsDir+":/etc/httpd/logs",
 		"-v", confDir+":/mnt/conf.d",
@@ -178,16 +192,30 @@ OIDCRemoteUserClaim "preferred_username"
 		"-p", "0.0.0.0:9443:9443/tcp",
 		*httpdImage,
 		"/usr/local/bin/run_httpd", "--hostname", *hostname)
-	err = RedirectPipes(httpdCmd, "H", "\033[0;35m")
-	if err != nil {
+	if err := RedirectPipes(httpdCmd, "H", "\033[0;35m"); err != nil {
 		return fmt.Errorf("failed to redirect pipes: %v", err)
 	}
 	log.Printf("Executing %s", httpdCmd.String())
-	err = httpdCmd.Start()
-	if err != nil {
+	if err := httpdCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start httpd: %v", err)
 	}
+	go WaitAndRestartHttpd()
 	return nil
+}
+
+func WaitAndRestartHttpd() {
+	if err := httpdCmd.Wait(); err != nil {
+		log.Printf("httpd exited with error: %v", err)
+	}
+	stopHttpdMutex.Lock()
+	defer stopHttpdMutex.Unlock()
+	if stopHttpd {
+		return
+	}
+	log.Printf("*** RESTARTING HTTPD ***")
+	if err := PodmanRunHttpd(); err != nil {
+		log.Printf("Failed to restart httpd: %v", err)
+	}
 }
 
 func socat(udsPath, tcpAddr string) error {
@@ -268,6 +296,9 @@ func WriteOpenIDConfiguration(path string) error {
 }
 
 func StopHttpd() {
+	stopHttpdMutex.Lock()
+	defer stopHttpdMutex.Unlock()
+	stopHttpd = true
 	err := httpdCmd.Process.Signal(syscall.SIGTERM)
 	if err != nil {
 		log.Printf("Failed to stop httpd: %v", err)
