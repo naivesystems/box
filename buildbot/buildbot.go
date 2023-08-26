@@ -210,13 +210,27 @@ factory.addStep(steps.Gerrit(
 factory.addStep(steps.TreeSize())
 factory.addStep(steps.Compile(
 	name='compile',
-	command=['make'],
+	command=[
+		'podman', 'run', '--rm',
+		'--userns=keep-id:uid=1000,gid=1000',
+		'-v', util.Interpolate('%%(prop:builddir)s/build:/home/runner/work'),
+		'-w', '/home/runner/work',
+		'naive.systems/box/buildbot/runner:ubuntu2204',
+		'make'
+	],
 	description='compiling',
 	descriptionDone='compiles'
 ))
 factory.addStep(steps.Test(
 	name='test',
-	command=['make', 'test'],
+	command=[
+		'podman', 'run', '--rm',
+		'--userns=keep-id:uid=1000,gid=1000',
+		'-v', util.Interpolate('%%(prop:builddir)s/build:/home/runner/work'),
+		'-w', '/home/runner/work',
+		'naive.systems/box/buildbot/runner:ubuntu2204',
+		'make', 'test'
+	],
 	description='testing',
 	descriptionDone='tests'
 ))

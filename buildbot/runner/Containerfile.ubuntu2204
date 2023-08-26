@@ -1,0 +1,108 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+acl \
+aria2 \
+autoconf \
+automake \
+binutils \
+bison \
+brotli \
+bzip2 \
+coreutils \
+curl \
+dbus \
+dnsutils \
+dpkg \
+dpkg-dev \
+fakeroot \
+file \
+flex \
+fonts-noto-color-emoji \
+ftp \
+g++ \
+gcc \
+gnupg2 \
+haveged \
+imagemagick \
+iproute2 \
+iputils-ping \
+jq \
+lib32z1 \
+libc++-dev \
+libc++abi-dev \
+libc6-dev \
+libcurl4 \
+libgbm-dev \
+libgconf-2-4 \
+libgsl-dev \
+libgtk-3-0 \
+libmagic-dev \
+libmagickcore-dev \
+libmagickwand-dev \
+libsecret-1-dev \
+libsqlite3-dev \
+libssl-dev \
+libtool \
+libunwind8 \
+libxkbfile-dev \
+libxss1 \
+libyaml-dev \
+locales \
+lz4 \
+m4 \
+make \
+mediainfo \
+mercurial \
+net-tools \
+netcat \
+openssh-client \
+p7zip-full \
+p7zip-rar \
+parallel \
+pass \
+patchelf \
+pkg-config \
+pollinate \
+python-is-python3 \
+rpm \
+rsync \
+shellcheck \
+sphinxsearch \
+sqlite3 \
+ssh \
+sshpass \
+subversion \
+sudo \
+swig \
+tar \
+telnet \
+texinfo \
+time \
+tk \
+tzdata \
+unzip \
+upx \
+wget \
+xorriso \
+xvfb \
+xz-utils \
+zip \
+zsync \
+&& apt-get clean \
+&& rm -rf /var/lib/apt/lists/*
+
+ARG USERNAME=runner
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME \
+&& useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+&& echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+&& chmod 0440 /etc/sudoers.d/$USERNAME
+
+USER $USERNAME
+WORKDIR /home/$USERNAME
+RUN mkdir -p .cache work
