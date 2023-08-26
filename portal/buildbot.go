@@ -5,9 +5,14 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 
 	"naive.systems/box/buildbot"
 	"naive.systems/box/buildbot/pip"
@@ -39,14 +44,18 @@ func StartBuildbot() error {
 	bb.WWWProtocol = "https"
 	bb.WWWHost = *hostname
 	bb.PublicPort = 9443
+	bb.Gerrit.Server = *bindIP
+	bb.Gerrit.Port = 29418
 
-	if err := PrepareBuildbotAccountInGerrit(); err != nil {
-		return err
-	}
-	err = RunBuildbot()
+	gps, err := PrepareBuildbotAccountInGerrit()
 	if err != nil {
 		return err
 	}
+	err = bb.Start(gps)
+	if err != nil {
+		return err
+	}
+	go WatchGerritProjects()
 	return nil
 }
 
@@ -97,44 +106,297 @@ func InitBuildbot() error {
 	return nil
 }
 
-func PrepareBuildbotAccountInGerrit() error {
+func testGerritConnection(username, host string, portNumber int) error {
+	buildbotDir := filepath.Join(*workdir, "buildbot")
+	sshDir := filepath.Join(buildbotDir, "ssh")
+	privateKeyPath := filepath.Join(sshDir, "id_ed25519")
+
+	port := strconv.Itoa(portNumber)
+	cmd := exec.Command("ssh", "-T",
+		"-o", "BatchMode=yes",
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-i", privateKeyPath,
+		"-l", username,
+		"-p", port,
+		host)
+	out, err := cmd.CombinedOutput()
+	if !strings.Contains(string(out), "you have successfully connected over SSH") {
+		log.Printf("ssh: '%s'", string(out))
+		if err != nil {
+			log.Printf("ssh: %v", err)
+		}
+		return errors.New("unable to connect over SSH")
+	}
+	log.Printf("tested connection to %s:%d", host, portNumber)
+	return nil
+}
+
+func testGerritProjectAccess(project, username, host string, portNumber int) error {
+	buildbotDir := filepath.Join(*workdir, "buildbot")
+	sshDir := filepath.Join(buildbotDir, "ssh")
+	privateKeyPath := filepath.Join(sshDir, "id_ed25519")
+
+	port := strconv.Itoa(portNumber)
+	cmd := exec.Command("ssh", "-T",
+		"-i", privateKeyPath,
+		"-l", username,
+		"-p", port,
+		host,
+		"gerrit", "ls-projects", "-p", project)
+	out, err := cmd.CombinedOutput()
+	foundProject := false
+	for _, line := range strings.Split(string(out), "\n") {
+		if line == project {
+			foundProject = true
+			break
+		}
+	}
+	if !foundProject {
+		log.Printf("ssh: '%s'", string(out))
+		if err != nil {
+			log.Printf("ssh: %v", err)
+		}
+		return fmt.Errorf("unable to find project '%s'", project)
+	}
+	if err := testCloneProject(project, username, host, portNumber); err != nil {
+		return fmt.Errorf("unable to clone '%s': %v", project, err)
+	}
+	log.Printf("%s has access to project '%s'", username, project)
+	return nil
+}
+
+func testCloneProject(project, username, host string, portNumber int) error {
+	buildbotDir := filepath.Join(*workdir, "buildbot")
+	sshDir := filepath.Join(buildbotDir, "ssh")
+	privateKeyPath := filepath.Join(sshDir, "id_ed25519")
+
+	// Construct the SSH URL
+	sshURL := fmt.Sprintf("ssh://%s@%s:%d/%s.git", username, host, portNumber, project)
+
+	// Create a temporary directory
+	tempDir, err := os.MkdirTemp("", "project-clone-")
+	if err != nil {
+		return errors.New("failed to create temporary directory: " + err.Error())
+	}
+	defer func() {
+		// Clean up the temporary directory after usage.
+		_ = os.RemoveAll(tempDir)
+	}()
+
+	// Execute the git clone command
+	cmd := exec.Command("git", "clone", "-c", "core.sshCommand=ssh -i "+privateKeyPath, sshURL, tempDir)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.New("failed to clone project: " + string(output))
+	}
+
+	return nil
+}
+
+func grantGerritPermissions(client *gerrit.Client, project, host string, portNumber int) error {
+	group, err := client.GetGroup("Service Users")
+	if err != nil {
+		return err
+	}
+	log.Printf("%s group ID is %s", group.Name, group.ID)
+
+	payload := map[string]any{
+		"add": map[string]any{
+			"refs/*": map[string]any{
+				"permissions": map[string]any{
+					"read": map[string]any{
+						"rules": map[string]any{
+							group.ID: map[string]any{
+								"action": "ALLOW",
+							},
+						},
+					},
+				},
+			},
+			"refs/heads/*": map[string]any{
+				"permissions": map[string]any{
+					"label-Verified": map[string]any{
+						"label": "Verified",
+						"rules": map[string]any{
+							group.ID: map[string]any{
+								"action": "ALLOW",
+								"min":    -1,
+								"max":    +1,
+							},
+						},
+					},
+					"read": map[string]any{
+						"rules": map[string]any{
+							"global:Anonymous-Users": map[string]any{
+								"action": "DENY",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	endpoint := fmt.Sprintf("projects/%s/access", project)
+	_, err = client.MakeJSONRequest(http.MethodPost, endpoint, payload)
+	return err
+}
+
+func testGerritConnectionWithRetries(username, host string, portNumber int) error {
+	for i := 0; i < 10; i++ {
+		err := testGerritConnection(username, host, portNumber)
+		if err == nil {
+			return nil
+		}
+		time.Sleep(5 * time.Second)
+	}
+	return testGerritConnection(username, host, portNumber)
+}
+
+func createVerifiedLabel(client *gerrit.Client) error {
+	payload := map[string]any{
+		"commit_message": "Create Verified Label",
+		"values": map[string]string{
+			"-1": "Fails",
+			" 0": "No score",
+			"+1": "Verified",
+		},
+		"function":       "MaxWithBlock",
+		"copy_condition": "changekind:NO_CHANGE",
+	}
+	endpoint := "projects/All-Projects/labels/Verified"
+	_, err := client.MakeJSONRequest(http.MethodPut, endpoint, payload)
+	return err
+}
+
+func PrepareBuildbotAccountInGerrit() ([]*gerrit.Project, error) {
 	const username = "buildbot"
 
 	sshKey, err := bb.PublicKey()
 	if err != nil {
-		return fmt.Errorf("error loading public key: %w", err)
+		return nil, fmt.Errorf("error loading public key: %w", err)
 	}
 
 	// Ensure the user exists
 	if err := AddGerritUser(username); err != nil {
-		return fmt.Errorf("error ensuring user exists: %w", err)
+		return nil, fmt.Errorf("error ensuring user exists: %w", err)
 	}
 
 	client := gerrit.NewClient("http://"+*bindIP+":8081", "admin")
 	if err := client.Login(); err != nil {
-		return fmt.Errorf("error logging into gerrit: %w", err)
+		return nil, fmt.Errorf("error logging into gerrit: %w", err)
+	}
+
+	// Create the Verified label
+	if err := createVerifiedLabel(client); err != nil {
+		return nil, fmt.Errorf("error creating Verified label: %w", err)
+	}
+
+	// Grant permissions to Service Users
+	if err := grantGerritPermissions(client, "All-Projects", *bindIP, 29418); err != nil {
+		return nil, fmt.Errorf("error granting Gerrit permissions: %w", err)
 	}
 
 	// Add the user to the "Service Users" group
 	if err := client.AddMemberToGroup("Service Users", username); err != nil {
-		return fmt.Errorf("error adding user to group: %w", err)
+		return nil, fmt.Errorf("error adding user to group: %w", err)
 	}
 
 	// Ensure the user has the specified SSH key
 	if err := client.AddSSHKeyToAccount(username, sshKey); err != nil {
-		return fmt.Errorf("error ensuring SSH key is added: %w", err)
+		return nil, fmt.Errorf("error ensuring SSH key is added: %w", err)
+	}
+
+	if err := testGerritConnectionWithRetries(username, *bindIP, 29418); err != nil {
+		return nil, fmt.Errorf("error testing Gerrit connection: %w", err)
+	}
+
+	if err := testGerritProjectAccess("All-Projects", username, *bindIP, 29418); err != nil {
+		return nil, fmt.Errorf("error testing Gerrit project access: %w", err)
 	}
 
 	log.Println("Prepared buildbot account successfully")
-	return nil
-}
 
-func RunBuildbot() error {
-	return bb.Start()
+	gps, err := client.ListProjects()
+	if err != nil {
+		return nil, fmt.Errorf("error listing projects: %w", err)
+	}
+	return gps, nil
 }
 
 func StopBuildbot() {
 	if err := bb.Stop(); err != nil {
 		log.Printf("Failed to stop Buildbot: %v", err)
 	}
+}
+
+func WatchGerritProjects() {
+	for {
+		client := gerrit.NewClient("http://"+*bindIP+":8081", "admin")
+		if err := client.Login(); err != nil {
+			log.Printf("WatchGerritProjects: error logging into gerrit: %v", err)
+			time.Sleep(30 * time.Second)
+			continue
+		}
+
+		oldProjects, err := client.ListProjects()
+		if err != nil {
+			log.Printf("WatchGerritProjects: error listing old projects: %v", err)
+			time.Sleep(30 * time.Second)
+			continue
+		}
+		sortProjects(oldProjects)
+
+		for {
+			time.Sleep(5 * time.Second)
+
+			newProjects, err := client.ListProjects()
+			if err != nil {
+				log.Printf("WatchGerritProjects: error listing new projects: %v", err)
+				time.Sleep(30 * time.Second)
+				break
+			}
+			sortProjects(newProjects)
+
+			if sameProjects(oldProjects, newProjects) {
+				continue
+			}
+
+			if err := bb.RewriteConfig(newProjects); err != nil {
+				log.Printf("WatchGerritProjects: error rewriting buildbot config: %v", err)
+				return
+			}
+
+			if err := bb.Restart(); err != nil {
+				log.Printf("WatchGerritProjects: error restarting buildbot: %v", err)
+				return
+			}
+
+			oldProjects = newProjects
+		}
+	}
+}
+
+func sortProjects(projects []*gerrit.Project) {
+	sort.Slice(projects, func(i, j int) bool {
+		return projects[i].ID < projects[j].ID
+	})
+}
+
+func sameProjects(a, b []*gerrit.Project) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, x := range a {
+		if !sameProject(x, b[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func sameProject(a, b *gerrit.Project) bool {
+	return a.ID == b.ID && a.Name == b.Name && a.Description == b.Description
 }

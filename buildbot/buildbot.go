@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"naive.systems/box/portal/gerrit"
 )
 
 type worker struct {
@@ -48,6 +50,11 @@ type Buildbot struct {
 	PublicPort  int
 
 	workers []worker
+
+	Gerrit struct {
+		Server string
+		Port   int
+	}
 }
 
 func New() *Buildbot {
@@ -115,7 +122,7 @@ func (bb *Buildbot) createWorkers() error {
 	return nil
 }
 
-func (bb *Buildbot) writeConfig(w io.Writer) {
+func (bb *Buildbot) writeConfig(w io.Writer, gps []*gerrit.Project) {
 	fmt.Fprint(w, `from buildbot.plugins import *
 from buildbot.reporters.gerrit import GerritStatusPush
 from buildbot.reporters.http import HttpStatusPush
@@ -148,13 +155,94 @@ c['workers'] = []
 	for _, worker := range bb.workers {
 		fmt.Fprintf(w, "c['workers'].append(worker.Worker('%s', '%s', keepalive_interval=60))\n", worker.name, worker.password)
 	}
-	fmt.Fprintf(w, `
+	if len(gps) == 0 {
+		fmt.Fprintf(w, `
 c['workers'].append(worker.Worker('dummy', 'dummy'))
 factory = util.BuildFactory()
 factory.addStep(steps.ShellCommand(command=['/bin/true']))
 c['builders'].append(util.BuilderConfig(name='dummy', workername='dummy', factory=factory))
 c['schedulers'].append(schedulers.ForceScheduler(name='dummy', builderNames=['dummy']))
 `)
+	} else {
+		fmt.Fprintf(w, `
+c['change_source'].append(changes.GerritChangeSource(
+	gerritserver='%s',
+	gerritport='%d',
+	username='buildbot',
+	identity_file='%s',
+	handled_events=['patchset-created'],
+	get_files=True,
+	debug=True
+))
+`, bb.Gerrit.Server, bb.Gerrit.Port, bb.IdentityFile)
+
+		for _, gp := range gps {
+			fmt.Fprintf(w, `
+c['schedulers'].append(schedulers.AnyBranchScheduler(
+	name='%s presubmit scheduler',
+	change_filter=util.GerritChangeFilter(
+		project='%s',
+		eventtype='patchset-created'
+	),
+	treeStableTimer=None,
+	builderNames=['%s presubmit']
+))
+`, gp.Name, gp.Name, gp.Name)
+			fmt.Fprintf(w, `
+c['schedulers'].append(schedulers.ForceScheduler(
+	name='force',
+	builderNames=['%s presubmit']
+))
+`, gp.Name)
+			fmt.Fprintf(w, `
+factory = util.BuildFactory()
+factory.addStep(steps.Gerrit(
+	repourl='ssh://buildbot@%s:%d/%s.git',
+	sshPrivateKey=open('%s').read(),
+	submodules=True,
+	retryFetch=True,
+	clobberOnFailure=True,
+	mode='full',
+	method='fresh'
+))
+`, bb.Gerrit.Server, bb.Gerrit.Port, gp.ID, bb.IdentityFile)
+			fmt.Fprintf(w, `
+factory.addStep(steps.TreeSize())
+factory.addStep(steps.Compile(
+	name='compile',
+	command=['make'],
+	description='compiling',
+	descriptionDone='compiles'
+))
+factory.addStep(steps.Test(
+	name='test',
+	command=['make', 'test'],
+	description='testing',
+	descriptionDone='tests'
+))
+c['builders'].append(util.BuilderConfig(
+	name='%s presubmit',
+	`, gp.Name)
+			bb.printWorkerNames(w)
+			fmt.Fprintf(w, `
+	factory=factory,
+	env={
+		'PATH': '%s',
+		'CI': 'true'
+	}
+))
+`, bb.EnvPATH)
+		}
+
+		fmt.Fprintf(w, `
+c['services'].append(GerritStatusPush(
+	server='%s',
+	port=%d,
+	username='buildbot',
+	identity_file='%s'
+))
+`, bb.Gerrit.Server, bb.Gerrit.Port, bb.IdentityFile)
+	}
 }
 
 func (bb *Buildbot) PublicKey() (string, error) {
@@ -165,7 +253,7 @@ func (bb *Buildbot) PublicKey() (string, error) {
 	return strings.TrimSpace(string(bytes)), nil
 }
 
-func (bb *Buildbot) Start() error {
+func (bb *Buildbot) Start(gps []*gerrit.Project) error {
 	if bb.WorkDir == "" {
 		return errors.New("--buildbot_workdir must be specified")
 	}
@@ -229,7 +317,7 @@ func (bb *Buildbot) Start() error {
 	if err != nil {
 		return err
 	}
-	err = bb.RewriteConfig()
+	err = bb.RewriteConfig(gps)
 	if err != nil {
 		return err
 	}
@@ -314,9 +402,9 @@ func (bb *Buildbot) startWorkers() error {
 	return nil
 }
 
-func (bb *Buildbot) RewriteConfig() error {
+func (bb *Buildbot) RewriteConfig(gps []*gerrit.Project) error {
 	var b strings.Builder
-	bb.writeConfig(&b)
+	bb.writeConfig(&b, gps)
 	path := filepath.Join(bb.WorkDir, "master", "master.cfg")
 	err := os.WriteFile(path, []byte(b.String()), 0600)
 	if err != nil {
@@ -391,7 +479,7 @@ func (bb *Buildbot) stopWorker(name string) error {
 	return nil
 }
 
-func (bb *Buildbot) PrintWorkerNames(w io.Writer) {
+func (bb *Buildbot) printWorkerNames(w io.Writer) {
 	fmt.Fprint(w, "workernames=[")
 	for i, worker := range bb.workers {
 		if i == 0 {

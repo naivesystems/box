@@ -20,6 +20,17 @@ type Client struct {
 	HTTPPassword string // The HTTP password obtained after login.
 }
 
+type Project struct {
+	ID          string `json:"id"`             // The URL encoded project name.
+	Name        string `json:"name,omitempty"` // The name of the project.
+	Description string `json:"description,omitempty"`
+}
+
+type Group struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 func NewClient(remoteURL, remoteUser string) *Client {
 	return &Client{
 		RemoteURL:  remoteURL,
@@ -182,4 +193,41 @@ func (c *Client) AddMemberToGroup(groupID, accountID string) error {
 	endpoint := fmt.Sprintf("groups/%s/members/%s", url.QueryEscape(groupID), url.QueryEscape(accountID))
 	_, err := c.MakePlainTextRequest(http.MethodPut, endpoint, "")
 	return err
+}
+
+func (c *Client) ListProjects() ([]*Project, error) {
+	responseData, err := c.MakePlainTextRequest(http.MethodGet, "projects/", "")
+	if err != nil {
+		return nil, err
+	}
+
+	var projectsMap map[string]*Project
+	err = json.Unmarshal(responseData, &projectsMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	var projects []*Project
+	for name, project := range projectsMap {
+		if name == "All-Projects" || name == "All-Users" {
+			continue
+		}
+		project.Name = name
+		projects = append(projects, project)
+	}
+
+	return projects, nil
+}
+
+func (c *Client) GetGroup(groupID string) (*Group, error) {
+	endpoint := fmt.Sprintf("groups/%s", url.QueryEscape(groupID))
+	responseData, err := c.MakePlainTextRequest(http.MethodGet, endpoint, "")
+	if err != nil {
+		return nil, err
+	}
+	var group Group
+	if err := json.Unmarshal(responseData, &group); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	return &group, nil
 }
