@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -9,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -56,6 +60,7 @@ func StartBuildbot() error {
 		return err
 	}
 	go WatchGerritProjects()
+	go WatchGerritChanges()
 	return nil
 }
 
@@ -272,6 +277,14 @@ func createVerifiedLabel(client *gerrit.Client) error {
 func PrepareBuildbotAccountInGerrit() ([]*gerrit.Project, error) {
 	const username = "buildbot"
 
+	/*
+		TODO set account full name
+
+		Otherwise some messages do not look good. For example:
+		remote: The following approvals got outdated and were removed:
+		remote: * Verified+1 by Name of user not set #1000001
+	*/
+
 	sshKey, err := bb.PublicKey()
 	if err != nil {
 		return nil, fmt.Errorf("error loading public key: %w", err)
@@ -399,4 +412,117 @@ func sameProjects(a, b []*gerrit.Project) bool {
 
 func sameProject(a, b *gerrit.Project) bool {
 	return a.ID == b.ID && a.Name == b.Name && a.Description == b.Description
+}
+
+func WatchGerritChanges() {
+	buildbotDir := filepath.Join(*workdir, "buildbot")
+	sshDir := filepath.Join(buildbotDir, "ssh")
+	privateKeyPath := filepath.Join(sshDir, "id_ed25519")
+
+	for {
+		time.Sleep(5 * time.Second)
+
+		cmd := exec.Command("ssh", "-T",
+			"-i", privateKeyPath,
+			"-l", "buildbot",
+			"-p", "29418",
+			*bindIP,
+			"gerrit", "stream-events", "-s", "patchset-created", "-s", "change-merged")
+		cmd.Stderr = os.Stderr
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Printf("Error getting stdout pipe: %v\n", err)
+			continue
+		}
+
+		if err := cmd.Start(); err != nil {
+			log.Printf("Error starting command: %v\n", err)
+			continue
+		}
+
+		log.Println("WatchGerritChanges: started")
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			log.Printf("WatchGerritChanges: %s", line)
+			processGerritEvent(line)
+		}
+
+		if err := cmd.Wait(); err != nil {
+			log.Printf("Error waiting for command: %v\n", err)
+		}
+	}
+}
+
+type GerritEvent struct {
+	Type   string       `json:"type"`
+	Change GerritChange `json:"change"`
+}
+
+type GerritChange struct {
+	URL           string `json:"url"`
+	CommitMessage string `json:"commitMessage"`
+}
+
+func processGerritEvent(line string) {
+	var event GerritEvent
+	err := json.Unmarshal([]byte(line), &event)
+	if err != nil {
+		log.Printf("Error unmarshalling JSON: %v\n", err)
+		return
+	}
+
+	r := regexp.MustCompile(`(?i)(?m)^Bug-Id:\s*(\d+)`)
+	matches := r.FindAllStringSubmatch(event.Change.CommitMessage, -1)
+	log.Printf("WatchGerritChanges: %d matches", len(matches))
+	for _, match := range matches {
+		if len(match) > 1 {
+			sendUpdateToRedmine(match[1], event)
+		}
+	}
+}
+
+func sendUpdateToRedmine(bugID string, event GerritEvent) {
+	log.Printf("WatchGerritChanges: Bug-Id: %s", bugID)
+
+	adminKeyFile := filepath.Join(*workdir, "redmine", "data", "admin_api_key.txt")
+	redmineKey, err := os.ReadFile(adminKeyFile)
+	if err != nil {
+		log.Printf("Error reading redmine key: %v\n", err)
+		return
+	}
+
+	indentedCommitMsg := indentCommitMessage(event.Change.CommitMessage)
+	body := map[string]interface{}{
+		"issue": map[string]string{
+			"notes": event.Type + " " + event.Change.URL + "\n\n" + indentedCommitMsg,
+		},
+	}
+
+	jsonBody, _ := json.Marshal(body)
+	client := &http.Client{}
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:3000/issues/%s.json", *bindIP, bugID), bytes.NewBuffer(jsonBody))
+	if err != nil {
+		log.Printf("Error creating request: %v\n", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Redmine-API-Key", strings.TrimSpace(string(redmineKey)))
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error sending request: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	log.Println(resp.Status)
+}
+
+func indentCommitMessage(commitMsg string) string {
+	lines := strings.Split(commitMsg, "\n")
+	for i, line := range lines {
+		lines[i] = "    " + line // Indent each line by 4 spaces
+	}
+	return strings.Join(lines, "\n")
 }

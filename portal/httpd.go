@@ -212,6 +212,13 @@ func WaitAndRestartHttpd() {
 	if stopHttpd {
 		return
 	}
+	/*
+		TODO investigate why it restarts automatically
+
+		Restart causes an issue that mod_auth_openidc cookies are invalidated
+		and the user is redirected to the discover page once again. To mitigate
+		this, we probably should persist the cookies directory.
+	*/
 	log.Printf("*** RESTARTING HTTPD ***")
 	if err := PodmanRunHttpd(); err != nil {
 		log.Printf("Failed to restart httpd: %v", err)

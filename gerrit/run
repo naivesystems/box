@@ -77,7 +77,9 @@ run() {
 	link = https://HOSTNAME:9441/issues/$2
 [commentlink "bug_id"]
 	match = (Bug-Id:\\s+)(\\d+)
-	html = $1<a href=\"https://HOSTNAME:9441/issues/$2\">$2</a>
+	link = https://HOSTNAME:9441/issues/$2
+	prefix = $1
+	text = $2
 EOF
 
     exec java -Xms8g -Xmx12g -jar "$HOME/review_site/bin/gerrit.war" daemon \
