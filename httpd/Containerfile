@@ -21,6 +21,7 @@ RUN sed -i 's@</VirtualHost>@Header always set Strict-Transport-Security "max-ag
 RUN ln -s /mnt/conf.d/x0auth_openidc.conf /etc/httpd/conf.d
 ADD discover.html /var/www/html
 
+ADD z9440portal.conf /etc/httpd/conf.d
 ADD z9441redmine.conf /etc/httpd/conf.d
 ADD z9442gerrit.conf /etc/httpd/conf.d
 ADD z9443buildbot.conf /etc/httpd/conf.d

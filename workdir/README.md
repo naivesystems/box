@@ -52,6 +52,8 @@ Layout of the workdir:
     │   ├── conf.d
     │   │   └── x0auth_openidc.conf
     │   ├── logs
+    │   │   ├── portal_access_log
+    │   │   ├── portal_error_log
     │   │   ├── redmine_access_log
     │   │   ├── redmine_error_log
     │   │   ├── gerrit_access_log

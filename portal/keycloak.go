@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -149,4 +152,36 @@ func StopKeycloak() {
 		log.Printf("Failed to stop Keycloak: %v", err)
 	}
 	PodmanKill("keycloak")
+}
+
+func AddKeycloakUser(username, firstname, lastname string) (string, error) {
+	log.Printf("AddKeycloakUser('%s')", username)
+
+	cmd := exec.Command("podman", "exec", "keycloak",
+		"/home/keycloak/createuser",
+		"--hostname", *hostname,
+		"--username", username,
+		"--first-name", firstname,
+		"--last-name", lastname)
+
+	cmd.Stderr = os.Stderr
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("error running createuser script: %v", err)
+	}
+
+	lines := strings.Split(out.String(), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "[PASSWORD_OUTPUT]:") {
+			// Extracting the password from the line
+			password := strings.Split(line, ": ")[2]
+			return password, nil
+		}
+	}
+
+	return "", fmt.Errorf("unable to find password: %s", out.String())
 }

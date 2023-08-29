@@ -166,6 +166,12 @@ OIDCRemoteUserClaim "preferred_username"
 	if err != nil {
 		return err
 	}
+
+	portalSock := filepath.Join(socketsDir, "portal.sock")
+	err = socat(portalSock, *bindIP+":7777")
+	if err != nil {
+		return err
+	}
 	return PodmanRunHttpd()
 }
 
@@ -187,6 +193,7 @@ func PodmanRunHttpd() error {
 		"-v", metadataDir+":/var/cache/httpd/mod_auth_openidc/metadata:O",
 		"-p", "0.0.0.0:8080:8080/tcp",
 		"-p", "0.0.0.0:8443:8443/tcp",
+		"-p", "0.0.0.0:9440:9440/tcp",
 		"-p", "0.0.0.0:9441:9441/tcp",
 		"-p", "0.0.0.0:9442:9442/tcp",
 		"-p", "0.0.0.0:9443:9443/tcp",

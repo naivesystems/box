@@ -1,0 +1,81 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+createuser() {
+    local realm="nsbox"
+    local hostname="nsbox.local"
+
+    # Initialize variables with default or empty values
+    local username=""
+    local first_name=""
+    local last_name=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            "--hostname")
+                shift
+                hostname="$1"
+                echo "Using hostname $hostname instead of nsbox.local"
+                ;;
+            "--username")
+                shift
+                username="$1"
+                ;;
+            "--first-name")
+                shift
+                first_name="$1"
+                ;;
+            "--last-name")
+                shift
+                last_name="$1"
+                ;;
+            *)
+                echo "Invalid option: $1" >&2
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    if [ -z "$username" ] || [ -z "$first_name" ] || [ -z "$last_name" ]; then
+        echo "Error: Missing required parameters." >&2
+        exit 1
+    fi
+
+    local email="$username@nsbox.local"
+
+    cd "$HOME"
+    export KEYCLOAK_HOME="$HOME/keycloak"
+    export PATH="$PATH:$KEYCLOAK_HOME/bin"
+
+    # Generate a random password
+    local PASSWORD=$(openssl rand -base64 12)
+
+    sudo update-ca-trust
+
+    kcadm.sh config credentials --server "https://$hostname:9992/" \
+        --realm master --user admin \
+        --password "$(cat "$KEYCLOAK_HOME/admin_password.txt")"
+
+    kcadm.sh create users -r "$realm" -f - <<EOF
+{
+  "username": "$username",
+  "enabled": true,
+  "firstName": "$first_name",
+  "lastName": "$last_name",
+  "email": "$email",
+  "emailVerified": true,
+  "requiredActions": ["CONFIGURE_TOTP"]
+}
+EOF
+
+    kcadm.sh set-password -r "$realm" --username "$username" \
+        --new-password "$PASSWORD" --temporary
+
+    echo "[PASSWORD_OUTPUT]: Generated password for user $username: $PASSWORD"
+}
+
+createuser "$@"

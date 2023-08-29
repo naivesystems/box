@@ -1,12 +1,16 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
 
@@ -100,4 +104,91 @@ func StopRedmine() {
 		log.Printf("Failed to stop Redmine: %v", err)
 	}
 	PodmanKill("redmine")
+}
+
+func AddRedmineUser(username, firstname, lastname string) (int, error) {
+	adminKeyFile := filepath.Join(*workdir, "redmine", "data", "admin_api_key.txt")
+	redmineKey, err := os.ReadFile(adminKeyFile)
+	if err != nil {
+		return 0, fmt.Errorf("error reading redmine key: %v", err)
+	}
+
+	body := map[string]any{
+		"user": map[string]any{
+			"login":             username,
+			"firstname":         firstname,
+			"lastname":          lastname,
+			"mail":              fmt.Sprintf("%s@nsbox.local", username),
+			"generate_password": true, // Let Redmine generate the password
+		},
+	}
+
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return 0, fmt.Errorf("error marshalling JSON: %v", err)
+	}
+
+	req, err := http.NewRequest("POST",
+		fmt.Sprintf("http://%s:3000/users.json", *bindIP),
+		bytes.NewBuffer(jsonBody))
+
+	if err != nil {
+		return 0, fmt.Errorf("error creating request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Redmine-API-Key", strings.TrimSpace(string(redmineKey)))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return 0, fmt.Errorf("unexpected status from Redmine: %s", resp.Status)
+	}
+
+	var userResponse struct {
+		User struct {
+			ID int `json:"id"`
+		} `json:"user"`
+	}
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&userResponse)
+	if err != nil {
+		return 0, fmt.Errorf("error decoding Redmine response: %v", err)
+	}
+
+	return userResponse.User.ID, nil
+}
+
+func DeleteRedmineUser(userID int) error {
+	adminKeyFile := filepath.Join(*workdir, "redmine", "data", "admin_api_key.txt")
+	redmineKey, err := os.ReadFile(adminKeyFile)
+	if err != nil {
+		return fmt.Errorf("error reading Redmine key: %v", err)
+	}
+
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("http://%s:3000/users/%d.json", *bindIP, userID), nil)
+	if err != nil {
+		return fmt.Errorf("error creating DELETE request for Redmine user: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Redmine-API-Key", strings.TrimSpace(string(redmineKey)))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending DELETE request to Redmine: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("error deleting user from Redmine, got status: %s", resp.Status)
+	}
+
+	return nil
 }
