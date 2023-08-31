@@ -18,6 +18,9 @@ type Client struct {
 	RemoteURL    string // URL of the Gerrit instance.
 	RemoteUser   string // Remote user to be set as the REMOTE_USER header.
 	HTTPPassword string // The HTTP password obtained after login.
+
+	RemoteUserName  string
+	RemoteUserEmail string
 }
 
 type Project struct {
@@ -31,10 +34,12 @@ type Group struct {
 	Name string `json:"name"`
 }
 
-func NewClient(remoteURL, remoteUser string) *Client {
+func NewClient(remoteURL, remoteUser, name, email string) *Client {
 	return &Client{
-		RemoteURL:  remoteURL,
-		RemoteUser: remoteUser,
+		RemoteURL:       remoteURL,
+		RemoteUser:      remoteUser,
+		RemoteUserName:  name,
+		RemoteUserEmail: email,
 	}
 }
 
@@ -58,6 +63,8 @@ func (c *Client) Login() error {
 		return fmt.Errorf("failed to create initial login request: %w", err)
 	}
 	req.Header.Set("REMOTE_USER", c.RemoteUser)
+	req.Header.Set("OIDC_CLAIM_name", c.RemoteUserName)
+	req.Header.Set("OIDC_CLAIM_email", c.RemoteUserEmail)
 
 	resp, err := client.Do(req)
 	if err != nil {

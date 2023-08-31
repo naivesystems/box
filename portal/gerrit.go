@@ -41,7 +41,7 @@ func StartGerrit() error {
 		return err
 	}
 	WaitGerritUp()
-	if err := AddGerritUser("admin"); err != nil {
+	if err := AddGerritUser("admin", "Administrator", "admin@nsbox.local"); err != nil {
 		return err
 	}
 	return nil
@@ -138,7 +138,7 @@ func GetGerritVersion() (string, error) {
 	return strings.Trim(lines[len(lines)-1], "\""), nil
 }
 
-func AddGerritUser(username string) error {
+func AddGerritUser(username, displayName, email string) error {
 	log.Printf("AddGerritUser('%s')", username)
 
 	url := "http://" + *bindIP + ":8081/login/"
@@ -150,6 +150,8 @@ func AddGerritUser(username string) error {
 
 	// Set the header
 	req.Header.Set("REMOTE_USER", username)
+	req.Header.Set("OIDC_CLAIM_name", displayName)
+	req.Header.Set("OIDC_CLAIM_email", email)
 
 	// Custom HTTP client with no redirects policy
 	client := &http.Client{

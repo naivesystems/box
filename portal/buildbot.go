@@ -291,11 +291,11 @@ func PrepareBuildbotAccountInGerrit() ([]*gerrit.Project, error) {
 	}
 
 	// Ensure the user exists
-	if err := AddGerritUser(username); err != nil {
+	if err := AddGerritUser(username, "Buildbot", "buildbot@nsbox.local"); err != nil {
 		return nil, fmt.Errorf("error ensuring user exists: %w", err)
 	}
 
-	client := gerrit.NewClient("http://"+*bindIP+":8081", "admin")
+	client := gerrit.NewClient("http://"+*bindIP+":8081", "admin", "Administrator", "admin@nsbox.local")
 	if err := client.Login(); err != nil {
 		return nil, fmt.Errorf("error logging into gerrit: %w", err)
 	}
@@ -345,7 +345,7 @@ func StopBuildbot() {
 
 func WatchGerritProjects() {
 	for {
-		client := gerrit.NewClient("http://"+*bindIP+":8081", "admin")
+		client := gerrit.NewClient("http://"+*bindIP+":8081", "admin", "Administrator", "admin@nsbox.local")
 		if err := client.Login(); err != nil {
 			log.Printf("WatchGerritProjects: error logging into gerrit: %v", err)
 			time.Sleep(30 * time.Second)

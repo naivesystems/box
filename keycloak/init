@@ -53,7 +53,10 @@ EOF
     kcadm.sh create users -r "$realm" -f - <<EOF
 {
   "username": "$admin",
-  "enabled": true
+  "enabled": true,
+  "firstName": "Administrator",
+  "email": "$admin@$hostname",
+  "emailVerified": true
 }
 EOF
 
