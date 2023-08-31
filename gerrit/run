@@ -6,13 +6,32 @@ set -o pipefail
 
 run() {
     local hostname="nsbox.local"
+    local httpBindIP="127.0.0.1"
+    local sshListen="0.0.0.0:29418"
+    local sshAdvertise="$hostname:29418"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             "--hostname")
                 shift
+                echo "Using hostname $1 instead of $hostname"
                 hostname="$1"
-                echo "Using hostname $hostname instead of nsbox.local"
+                sshAdvertise="$hostname:29418"
+                ;;
+            "--http-bind")
+                shift
+                echo "Using HTTP bind IP $1 instead of $httpBindIP"
+                httpBindIP="$1"
+                ;;
+            "--ssh-listen")
+                shift
+                echo "Using sshd.listenAddress $1 instead of $sshListen"
+                sshListen="$1"
+                ;;
+            "--ssh-advertise")
+                shift
+                echo "Using sshd.advertisedAddress $1 instead of $sshAdvertise"
+                sshAdvertise="$1"
                 ;;
             *)
                 echo "Invalid option: $1" >&2
@@ -37,9 +56,11 @@ run() {
     git config -f review_site/etc/gerrit.config receive.cancellationTimeout 1min
     git config -f review_site/etc/gerrit.config receive.checkReferencedObjectsAreReachable false
     git config -f review_site/etc/gerrit.config sendemail.enable false
+    git config -f review_site/etc/gerrit.config sshd.listenAddress "$sshListen"
+    git config -f review_site/etc/gerrit.config sshd.advertisedAddress "$sshAdvertise"
     git config -f review_site/etc/gerrit.config sshd.threads 16
     git config -f review_site/etc/gerrit.config sshd.commandStartThreads 5
-    git config -f review_site/etc/gerrit.config httpd.listenUrl "proxy-https://0.0.0.0:8081/"
+    git config -f review_site/etc/gerrit.config httpd.listenUrl "proxy-https://$httpBindIP:8081/"
     git config -f review_site/etc/gerrit.config httpd.minThreads 100
     git config -f review_site/etc/gerrit.config httpd.maxThreads 100
     git config -f review_site/etc/gerrit.config core.packedGitWindowSize 16k

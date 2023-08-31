@@ -56,7 +56,10 @@ func InitGerrit() error {
 }
 
 func RunGerrit() error {
-	cmd, err := PodmanRunGerrit(false, "/home/gerrit/run")
+	cmd, err := PodmanRunGerrit(false, "/home/gerrit/run",
+		"--hostname", *hostname,
+		"--http-bind", *bindIP,
+		"--ssh-listen", *gerritSSHAddr)
 	if err != nil {
 		return fmt.Errorf("failed to start Gerrit: %v", err)
 	}
@@ -72,8 +75,7 @@ func PodmanRunGerrit(wait bool, args ...string) (*exec.Cmd, error) {
 		"--name", "gerrit", "--replace",
 		"--userns=keep-id:uid=1000,gid=1000",
 		"-v", gerritDir + ":/home/gerrit/review_site",
-		"-p", *bindIP + ":8081:8081/tcp",
-		"-p", *gerritSSHAddr + ":29418/tcp",
+		"--network=host",
 		*gerritImage,
 	}
 	cmdArgs = append(cmdArgs, args...)
