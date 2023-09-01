@@ -7,5 +7,4 @@ Mount points:
 - /certs
 - /etc/httpd/logs
 - /mnt/conf.d
-- /mnt/sockets
 - /var/cache/httpd/mod_auth_openidc/metadata

@@ -63,9 +63,4 @@ Layout of the workdir:
     │   ├── metadata
     │   │   ├── nsbox.local%3A9992%2Frealms%2Fnsbox.provider
     │   │   └── nsbox.local%3A9992%2Frealms%2Fnsbox.client
-    │   ├── sockets
-    │   │   ├── buildbot.sock
-    │   │   ├── gerrit.sock
-    │   │   ├── portal.sock
-    │   │   └── redmine.sock
     │   └── version.txt

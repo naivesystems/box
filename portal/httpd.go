@@ -20,8 +20,6 @@ var httpdImage = flag.String("httpd_image", "naive.systems/box/httpd:dev", "")
 
 var httpdCmd *exec.Cmd
 
-var socatCmds []*exec.Cmd
-
 var (
 	stopHttpd      bool
 	stopHttpdMutex sync.Mutex
@@ -69,12 +67,6 @@ func InitHttpd() error {
 		return fmt.Errorf("os.MkdirAll(%s): %v", metadataDir, err)
 	}
 
-	socketsDir := filepath.Join(*workdir, "httpd", "sockets")
-	err = os.MkdirAll(socketsDir, 0755)
-	if err != nil {
-		return fmt.Errorf("os.MkdirAll(%s): %v", socketsDir, err)
-	}
-
 	versionFile := filepath.Join(*workdir, "httpd", "version.txt")
 	return os.WriteFile(versionFile, []byte("Apache/2.4.57 (Fedora Linux)"), 0600)
 }
@@ -84,12 +76,10 @@ func RunHttpd() error {
 	confDir := filepath.Join(httpdDir, "conf.d")
 	logsDir := filepath.Join(httpdDir, "logs")
 	metadataDir := filepath.Join(httpdDir, "metadata")
-	socketsDir := filepath.Join(httpdDir, "sockets")
 
 	os.MkdirAll(confDir, 0700)
 	os.MkdirAll(logsDir, 0700)
 	os.MkdirAll(metadataDir, 0700)
-	os.MkdirAll(socketsDir, 0755)
 
 	// Generate x0auth_openidc.conf
 	passphrase, err := GenerateOIDCCryptoPassphrase(80)
@@ -148,30 +138,6 @@ OIDCRemoteUserClaim "preferred_username"
 		return err
 	}
 
-	// Generate sockets
-	buildbotSock := filepath.Join(socketsDir, "buildbot.sock")
-	err = socat(buildbotSock, *bindIP+":8010")
-	if err != nil {
-		return err
-	}
-
-	gerritSock := filepath.Join(socketsDir, "gerrit.sock")
-	err = socat(gerritSock, *bindIP+":8081")
-	if err != nil {
-		return err
-	}
-
-	redmineSock := filepath.Join(socketsDir, "redmine.sock")
-	err = socat(redmineSock, *bindIP+":3000")
-	if err != nil {
-		return err
-	}
-
-	portalSock := filepath.Join(socketsDir, "portal.sock")
-	err = socat(portalSock, *bindIP+":7777")
-	if err != nil {
-		return err
-	}
 	return PodmanRunHttpd()
 }
 
@@ -181,7 +147,6 @@ func PodmanRunHttpd() error {
 	confDir := filepath.Join(httpdDir, "conf.d")
 	logsDir := filepath.Join(httpdDir, "logs")
 	metadataDir := filepath.Join(httpdDir, "metadata")
-	socketsDir := filepath.Join(httpdDir, "sockets")
 
 	// Start the container
 	httpdCmd = exec.Command("podman", "run", "--rm",
@@ -189,14 +154,8 @@ func PodmanRunHttpd() error {
 		"-v", certsDir+":/certs",
 		"-v", logsDir+":/etc/httpd/logs",
 		"-v", confDir+":/mnt/conf.d",
-		"-v", socketsDir+":/mnt/sockets",
 		"-v", metadataDir+":/var/cache/httpd/mod_auth_openidc/metadata:O",
-		"-p", "0.0.0.0:8080:8080/tcp",
-		"-p", "0.0.0.0:8443:8443/tcp",
-		"-p", "0.0.0.0:9440:9440/tcp",
-		"-p", "0.0.0.0:9441:9441/tcp",
-		"-p", "0.0.0.0:9442:9442/tcp",
-		"-p", "0.0.0.0:9443:9443/tcp",
+		"--network=host",
 		*httpdImage,
 		"/usr/local/bin/run_httpd", "--hostname", *hostname)
 	if err := RedirectPipes(httpdCmd, "H", "\033[0;35m"); err != nil {
@@ -230,21 +189,6 @@ func WaitAndRestartHttpd() {
 	if err := PodmanRunHttpd(); err != nil {
 		log.Printf("Failed to restart httpd: %v", err)
 	}
-}
-
-func socat(udsPath, tcpAddr string) error {
-	cmd := exec.Command("socat", "-d", "-d",
-		"UNIX-LISTEN:"+udsPath+",mode=777,fork", "TCP4:"+tcpAddr)
-	err := RedirectPipes(cmd, "S", "\033[0;35m")
-	if err != nil {
-		return fmt.Errorf("failed to redirect pipes: %v", err)
-	}
-	err = cmd.Start()
-	if err != nil {
-		return err
-	}
-	socatCmds = append(socatCmds, cmd)
-	return nil
 }
 
 func GenerateOIDCCryptoPassphrase(length int) (string, error) {
@@ -318,10 +262,4 @@ func StopHttpd() {
 		log.Printf("Failed to stop httpd: %v", err)
 	}
 	PodmanKill("httpd")
-	for i, cmd := range socatCmds {
-		err := cmd.Process.Signal(syscall.SIGTERM)
-		if err != nil {
-			log.Printf("Failed to stop socat%d: %v", i, err)
-		}
-	}
 }
