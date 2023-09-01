@@ -59,7 +59,18 @@ run() {
     git config -f review_site/etc/gerrit.config receive.timeout 15min
     git config -f review_site/etc/gerrit.config receive.cancellationTimeout 1min
     git config -f review_site/etc/gerrit.config receive.checkReferencedObjectsAreReachable false
-    git config -f review_site/etc/gerrit.config sendemail.enable false
+    git config -f review_site/etc/gerrit.config sendemail.enable true
+    git config -f review_site/etc/gerrit.config sendemail.html true
+    git config -f review_site/etc/gerrit.config sendemail.from USER
+    git config -f review_site/etc/gerrit.config sendemail.allowedDomain "$hostname"
+    git config -f review_site/etc/gerrit.config sendemail.smtpServer "127.0.0.1"
+    git config -f review_site/etc/gerrit.config sendemail.smtpServerPort 9025
+    git config -f review_site/etc/gerrit.config sendemail.smtpEncryption none
+    git config -f review_site/etc/gerrit.config sendemail.includeDiff true
+    git config -f review_site/etc/gerrit.config sendemail.allowTLD local
+    git config -f review_site/etc/gerrit.config user.name Gerrit
+    git config -f review_site/etc/gerrit.config user.email "gerrit@$hostname"
+    git config -f review_site/etc/gerrit.config user.anonymousCoward Anonymous
     git config -f review_site/etc/gerrit.config sshd.listenAddress "$sshListen"
     git config -f review_site/etc/gerrit.config sshd.advertisedAddress "$sshAdvertise"
     git config -f review_site/etc/gerrit.config sshd.threads 16
@@ -73,11 +84,10 @@ run() {
     git config -f review_site/etc/gerrit.config pack.threads 3
     git config -f review_site/etc/gerrit.config gc.interval "1 day"
     git config -f review_site/etc/gerrit.config change.disablePrivateChanges true
-    git config -f review_site/etc/gerrit.config change.enableAttentionSet false
-    git config -f review_site/etc/gerrit.config change.enableAssignee false
     git config -f review_site/etc/gerrit.config change.mergeabilityComputationBehavior NEVER
     git config -f review_site/etc/gerrit.config change.conflictsPredicateEnabled false
     git config -f review_site/etc/gerrit.config change.move false
+    git config -f review_site/etc/gerrit.config change.sendNewPatchsetEmails true
     git config -f review_site/etc/gerrit.config change.updateDelay 17
     git config -f review_site/etc/gerrit.config download.command checkout
     git config -f review_site/etc/gerrit.config --add download.command cherry_pick

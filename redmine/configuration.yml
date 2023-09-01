@@ -1,2 +1,7 @@
 production:
   common_mark_enable_hardbreaks: false
+  email_delivery:
+    delivery_method: :smtp
+    smtp_settings:
+      address: 127.0.0.1
+      port: 9025
