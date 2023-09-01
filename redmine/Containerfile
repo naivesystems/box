@@ -28,7 +28,6 @@ WORKDIR /home/$USERNAME/redmine
 
 ADD configuration.yml /home/$USERNAME/redmine/config
 ADD database.yml /home/$USERNAME/redmine/config
-RUN sed -i 's/default: textile/default: common_mark/' /home/$USERNAME/redmine/config/settings.yml
 
 RUN echo "gem 'puma'" >Gemfile.local
 RUN bundle config set --local path vendor/bundle
@@ -41,3 +40,4 @@ ADD export_admin_api_key.rake /home/$USERNAME/redmine/lib/tasks
 
 ADD init /home/$USERNAME
 ADD run /home/$USERNAME
+ADD update_settings.rb /home/$USERNAME

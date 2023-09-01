@@ -6,6 +6,7 @@ set -o pipefail
 
 run() {
     local bindIP="127.0.0.1"
+    local hostname="nsbox.local"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -13,6 +14,11 @@ run() {
                 shift
                 echo "Using bind IP $1 instead of $bindIP"
                 bindIP="$1"
+                ;;
+            "--hostname")
+                shift
+                echo "Using hostname $1 instead of $hostname"
+                hostname="$1"
                 ;;
             *)
                 echo "Invalid option: $1" >&2
@@ -24,6 +30,7 @@ run() {
 
     cd "$HOME/redmine"
     cp data/secret_token.rb config/initializers/
+    ruby "$HOME/update_settings.rb" --hostname "$hostname"
     exec bundle exec rails server -e production --log-to-stdout -u puma \
         -b "$bindIP" -p 3000
 }
