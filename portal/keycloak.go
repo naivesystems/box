@@ -33,6 +33,8 @@ func StartKeycloak() {
 	versionFile := filepath.Join(keycloakDir, "version.txt")
 	if exists(versionFile) {
 		RunKeycloak()
+		WaitKeycloakUp()
+		UpdateKeycloakRedirectURIs()
 	} else {
 		InstallAndRunKeycloak()
 	}
@@ -114,7 +116,8 @@ func ExtractKeycloak() {
 }
 
 func InitKeycloak() {
-	cmd := exec.Command("podman", "exec", "keycloak", "/home/keycloak/init")
+	cmd := exec.Command("podman", "exec", "keycloak",
+		"/home/keycloak/init", "--hostname", *hostname)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
@@ -143,6 +146,17 @@ func RunKeycloak() {
 	err = keycloakCmd.Start()
 	if err != nil {
 		log.Fatalf("Failed to start Keycloak: %v", err)
+	}
+}
+
+func UpdateKeycloakRedirectURIs() {
+	cmd := exec.Command("podman", "exec", "keycloak",
+		"/home/keycloak/update_redirect_uris", "--hostname", *hostname)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Fatalf("Failed to update Keycloak redirectUris: %v", err)
 	}
 }
 

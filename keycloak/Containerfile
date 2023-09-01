@@ -2,6 +2,7 @@ FROM fedora:38
 
 RUN dnf update -y && dnf install -y \
 java-17-openjdk-headless \
+jq \
 openssl \
 wget
 
@@ -24,3 +25,4 @@ ADD createuser /home/$USERNAME
 ADD extract /home/$USERNAME
 ADD init /home/$USERNAME
 ADD run /home/$USERNAME
+ADD update_redirect_uris /home/$USERNAME
