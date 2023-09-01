@@ -44,7 +44,8 @@ init() {
     "https://$hostname:9440/*",
     "https://$hostname:9441/*",
     "https://$hostname:9442/*",
-    "https://$hostname:9443/*"
+    "https://$hostname:9443/*",
+    "https://$hostname:9444/*"
   ],
   "webOrigins": ["+"]
 }

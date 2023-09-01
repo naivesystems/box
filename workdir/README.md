@@ -15,6 +15,8 @@ Layout of the workdir:
     │   ├── README.md
     │   ├── themes
     │   └── version.txt
+    ├── mailpit
+    │   └── mails.db
     ├── redmine
     │   ├── data
     │   │   ├── admin_api_key.txt
@@ -54,6 +56,8 @@ Layout of the workdir:
     │   ├── logs
     │   │   ├── portal_access_log
     │   │   ├── portal_error_log
+    │   │   ├── mailpit_access_log
+    │   │   ├── mailpit_error_log
     │   │   ├── redmine_access_log
     │   │   ├── redmine_error_log
     │   │   ├── gerrit_access_log

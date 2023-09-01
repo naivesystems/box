@@ -36,9 +36,17 @@ func main() {
 	PrepareCerts()
 	StartKeycloak()
 
-	err := StartRedmine()
+	err := StartMailpit()
+	if err != nil {
+		log.Printf("Failed to start Mailpit: %v", err)
+		StopKeycloak()
+		os.Exit(1)
+	}
+
+	err = StartRedmine()
 	if err != nil {
 		log.Printf("Failed to start Redmine: %v", err)
+		StopMailpit()
 		StopKeycloak()
 		os.Exit(1)
 	}
@@ -47,6 +55,7 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to start Gerrit: %v", err)
 		StopRedmine()
+		StopMailpit()
 		StopKeycloak()
 		os.Exit(1)
 	}
@@ -56,6 +65,7 @@ func main() {
 		log.Printf("Failed to start Buildbot: %v", err)
 		StopGerrit()
 		StopRedmine()
+		StopMailpit()
 		StopKeycloak()
 		os.Exit(1)
 	}
@@ -66,6 +76,7 @@ func main() {
 		StopBuildbot()
 		StopGerrit()
 		StopRedmine()
+		StopMailpit()
 		StopKeycloak()
 		os.Exit(1)
 	}
@@ -83,6 +94,7 @@ func main() {
 		StopBuildbot()
 		StopGerrit()
 		StopRedmine()
+		StopMailpit()
 		StopKeycloak()
 		os.Exit(0)
 	}()

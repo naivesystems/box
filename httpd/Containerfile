@@ -25,5 +25,6 @@ ADD z9440portal.conf /etc/httpd/conf.d
 ADD z9441redmine.conf /etc/httpd/conf.d
 ADD z9442gerrit.conf /etc/httpd/conf.d
 ADD z9443buildbot.conf /etc/httpd/conf.d
+ADD z9444mailpit.conf /etc/httpd/conf.d
 
 ADD run /usr/local/bin/run_httpd
