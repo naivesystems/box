@@ -22,7 +22,7 @@ init() {
     echo "Exporting admin API key..."
     bundle exec rake redmine:export_admin_api_key >data/admin_api_key.txt
 
-    echo "5.0.5+nsbox.20230902" >data/version.txt
+    echo "5.0.5+nsbox.20230903" >data/version.txt
 }
 
 init "$@"

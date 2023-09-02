@@ -19,9 +19,9 @@ RUN groupadd --gid $USER_GID $USERNAME \
 USER $USERNAME
 
 WORKDIR /home/$USERNAME
-RUN wget https://github.com/naivesystems/redmine/archive/refs/tags/5.0.5+nsbox.20230902.tar.gz
+RUN wget https://github.com/naivesystems/redmine/archive/refs/tags/5.0.5+nsbox.20230903.tar.gz
 RUN mkdir redmine
-RUN tar -xvf 5.0.5+nsbox.20230902.tar.gz -C redmine --strip-components=1
+RUN tar -xvf 5.0.5+nsbox.20230903.tar.gz -C redmine --strip-components=1
 
 WORKDIR /home/$USERNAME/redmine
 
