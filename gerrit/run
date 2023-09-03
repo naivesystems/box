@@ -43,6 +43,8 @@ run() {
 
     cd "$HOME"
 
+    cp code-owners.jar review_site/plugins
+
     cp review_site/etc/gerrit.config.bak review_site/etc/gerrit.config
 
     git config -f review_site/etc/gerrit.config gerrit.canonicalWebUrl "https://$hostname:9442/"
@@ -115,6 +117,14 @@ run() {
 	link = https://HOSTNAME:9441/issues/$2
 	prefix = $1
 	text = $2
+[plugin "code-owners"]
+	backend = find-owners
+	disabled = true
+	requiredApproval = Code-Review+2
+	fallbackCodeOwners = ALL_USERS
+	allowedEmailDomain = HOSTNAME
+	enableImplicitApprovals = FORCED
+	exemptPureReverts = true
 EOF
 
     exec java -Xms8g -Xmx12g -jar "$HOME/review_site/bin/gerrit.war" daemon \

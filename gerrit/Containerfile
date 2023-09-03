@@ -17,6 +17,7 @@ USER $USERNAME
 WORKDIR /home/$USERNAME
 
 RUN wget https://gerrit-releases.storage.googleapis.com/gerrit-3.8.1.war
+RUN wget https://gerrit-ci.gerritforge.com/view/Plugins-stable-3.8/job/plugin-code-owners-bazel-master-stable-3.8/2/artifact/bazel-bin/plugins/code-owners/code-owners.jar
 
 ADD init /home/$USERNAME
 ADD run /home/$USERNAME
