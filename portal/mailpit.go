@@ -33,6 +33,7 @@ func StartMailpit() error {
 
 	mailpitCmd = exec.Command(*mailpitBin,
 		"--db-file", filepath.Join(mailpitDir, "mails.db"),
+		"--max", "100000",
 		"--listen", *bindIP+":8025",
 		"--smtp", *bindIP+":9025")
 
