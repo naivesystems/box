@@ -35,7 +35,16 @@ run() {
     sed -i "s/#ServerName www.example.com:80/ServerName $hostname:8080/" conf/httpd.conf
     sed -i "s/#ServerName www.example.com:443/ServerName $hostname:8443/" conf.d/y8443ssl.conf
     sed -i "s/localhost/$hostname/" conf.d/y8443ssl.conf
-    exec httpd -f $PWD/conf/httpd.conf -k start -DFOREGROUND
+
+    # httpd abuses SIGWINCH as the signal for graceful stop. When running the
+    # portal in vscode terminal, resizing the terminal causes SIGWINCH to be
+    # sent to httpd. I have no idea why the signal seems to be propagating,
+    # but that's what I observed and confirmed with the logs:
+    #
+    #     AH00492: caught SIGWINCH, shutting down gracefully
+    #
+    # See also: https://bz.apache.org/bugzilla/show_bug.cgi?id=50669
+    exec env --block-signal=WINCH httpd -f $PWD/conf/httpd.conf -k start -DFOREGROUND
 }
 
 run "$@"

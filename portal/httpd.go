@@ -179,25 +179,11 @@ func WaitAndRestartHttpd() {
 		return
 	}
 	/*
-		TODO investigate why it restarts automatically
+		TODO
 
 		Restart causes an issue that mod_auth_openidc cookies are invalidated
 		and the user is redirected to the discover page once again. To mitigate
 		this, we probably should persist the cookies directory.
-
-		Update on 2023-09-01:
-
-		httpd abuses SIGWINCH as the signal for graceful stop. When running the
-		portal in vscode terminal, resizing the terminal causes SIGWINCH to be
-		sent to httpd. I have no idea why the signal seems to be propagating,
-		but that's what I observed and confirmed with the logs:
-
-			AH00492: caught SIGWINCH, shutting down gracefully
-
-		See also: https://bz.apache.org/bugzilla/show_bug.cgi?id=50669
-
-		I have tried to capture the SIGWINCH signal or trap it in the run script
-		but neither worked. I have no idea on how to fix this bug.
 	*/
 	log.Printf("*** RESTARTING HTTPD ***")
 	if err := PodmanRunHttpd(); err != nil {
