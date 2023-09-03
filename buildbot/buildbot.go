@@ -128,6 +128,24 @@ from buildbot.reporters.gerrit import GerritStatusPush
 from buildbot.reporters.http import HttpStatusPush
 from buildbot.reporters.generators.build import BuildStatusGenerator
 from buildbot.reporters.message import MessageFormatterFunction
+from buildbot.www import resource
+
+import urllib.parse
+
+
+class NsboxLogoutResource(resource.Resource):
+	def render_GET(self, request):
+		session = request.getSession()
+		session.expire()
+		session.updateSession(request)
+		request.redirect(self.master.config.buildbotURL + 'OIDCRedirectURI?logout=' + urllib.parse.quote(self.master.config.buildbotURL, safe=''))
+		return b''
+
+
+class NsboxRemoteUserAuth(util.RemoteUserAuth):
+	def getLogoutResource(self):
+		return NsboxLogoutResource(self.master)
+
 
 c = BuildmasterConfig = {}
 c['buildbotNetUsageData'] = None
@@ -139,7 +157,7 @@ c['buildbotNetUsageData'] = None
 	fmt.Fprintf(w, "c['titleURL'] = '%s://%s:%d/'\n", bb.WWWProtocol, bb.WWWHost, bb.PublicPort)
 	fmt.Fprintf(w, `
 c['www'] = dict(port="tcp:%d:interface=%s",
-                auth=util.RemoteUserAuth(header="X-Remote-User",
+                auth=NsboxRemoteUserAuth(header="X-Remote-User",
                                          headerRegex="(?P<username>.+)"),
                 plugins={'base_react': {}},
                 change_hook_dialects={'gitlab': True, 'github': {}})

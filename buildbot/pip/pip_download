@@ -8,9 +8,9 @@ download() {
     python3 -m venv sandbox
     source sandbox/bin/activate
     pip install --upgrade pip
-    pip download -d /output 'buildbot[bundle]'
-    pip download -d /output 'buildbot-www-react'
-    pip download -d /output 'txrequests'
+    pip download -d /output 'buildbot[bundle]==3.9.2'
+    pip download -d /output 'buildbot-www-react==3.9.2'
+    pip download -d /output 'txrequests==0.9.6'
 }
 
 download "$@"

@@ -17,6 +17,7 @@ run() {
     distro fedora38
     distro ubuntu2004
     distro ubuntu2204
+    wget -P output https://github.com/naivesystems/buildbot/releases/download/3.9.2%2Bnsbox.20230903/buildbot_www_react-3.9.2-py3-none-any.whl
 }
 
 run "$@"
