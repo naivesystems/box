@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var redmineImage = flag.String("redmine_image", "naive.systems/box/redmine:dev", "")
@@ -34,7 +35,15 @@ func StartRedmine() error {
 		}
 		log.Printf("Redmine has been successfully initialized.")
 	}
-	return RunRedmine()
+	if err := RunRedmine(); err != nil {
+		return err
+	}
+	// TODO: update all user emails in case that hostname changed
+	if err := UpdateRedmineAdminEmail(); err != nil {
+		StopRedmine()
+		return err
+	}
+	return nil
 }
 
 func InitRedmine() error {
@@ -120,7 +129,7 @@ func AddRedmineUser(username, firstname, lastname string) (int, error) {
 			"login":             username,
 			"firstname":         firstname,
 			"lastname":          lastname,
-			"mail":              fmt.Sprintf("%s@nsbox.local", username),
+			"mail":              username + "@" + *hostname,
 			"generate_password": true, // Let Redmine generate the password
 		},
 	}
@@ -190,6 +199,60 @@ func DeleteRedmineUser(userID int) error {
 
 	if resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("error deleting user from Redmine, got status: %s", resp.Status)
+	}
+
+	return nil
+}
+
+func UpdateRedmineAdminEmail() error {
+	adminKeyFile := filepath.Join(*workdir, "redmine", "data", "admin_api_key.txt")
+	redmineKey, err := os.ReadFile(adminKeyFile)
+	if err != nil {
+		return fmt.Errorf("error reading redmine key: %v", err)
+	}
+
+	body := map[string]any{
+		"user": map[string]any{
+			"mail": "admin@" + *hostname,
+		},
+	}
+
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("error marshalling JSON: %v", err)
+	}
+
+	req, err := http.NewRequest("PUT",
+		fmt.Sprintf("http://%s:3000/my/account.json", *bindIP),
+		bytes.NewBuffer(jsonBody))
+
+	if err != nil {
+		return fmt.Errorf("error creating request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Redmine-API-Key", strings.TrimSpace(string(redmineKey)))
+
+	client := &http.Client{}
+	var resp *http.Response
+
+	const maxRetries = 5
+	const retryDelay = 2 * time.Second
+
+	for i := 0; i < maxRetries; i++ {
+		if resp, err = client.Do(req); err == nil {
+			break
+		}
+		fmt.Printf("Error sending request: %v, retrying in %v seconds...\n", err, retryDelay.Seconds())
+		time.Sleep(retryDelay)
+	}
+	if err != nil {
+		return fmt.Errorf("after %d retries, final error: %v", maxRetries, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("unexpected status from Redmine: %s", resp.Status)
 	}
 
 	return nil
