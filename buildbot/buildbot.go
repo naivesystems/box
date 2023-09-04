@@ -118,6 +118,8 @@ func (bb *Buildbot) createWorkers() error {
 		if err != nil {
 			return fmt.Errorf("buildbot-worker create-worker %s: %v", w.name, err)
 		}
+		_ = os.WriteFile(filepath.Join(bb.WorkDir, w.name, "info", "admin"), []byte("Administrator <admin@"+bb.WWWHost+">"), 0644)
+		_ = os.WriteFile(filepath.Join(bb.WorkDir, w.name, "info", "host"), []byte(bb.WWWHost), 0644)
 	}
 	return nil
 }

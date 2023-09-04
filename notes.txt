@@ -1,0 +1,27 @@
+2023-08-29
+
+Compared various mail capturing tools:
+
+https://github.com/mailhog/MailHog
+https://github.com/sj26/mailcatcher
+https://github.com/maildev/maildev
+https://github.com/axllent/mailpit
+https://github.com/emersion/go-smtp
+https://github.com/mailslurper/mailslurper
+
+
+2023-09-03
+
+Build buildbot from source:
+
+    make virtualenv
+    source .venv/bin/activate
+    trial buildbot
+    export NODE_OPTIONS=--openssl-legacy-provider
+    make frontend
+    make frontend_wheels
+
+After code changes:
+
+    cd www/react-base
+    python setup.py bdist_wheel
