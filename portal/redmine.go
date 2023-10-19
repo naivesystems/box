@@ -38,6 +38,12 @@ func StartRedmine() error {
 	if err := RunRedmine(); err != nil {
 		return err
 	}
+	// After redmine is started for the first time and before the admin user is
+	// created, there is a race condition between UpdateRedmineAdminEmail and
+	// the admin user creation. That is probably why I saw 404 Not Found
+	// sometimes, but I couldn't reproduce reliably.
+	// TODO: fix the race properly
+	time.Sleep(5 * time.Second)
 	// TODO: update all user emails in case that hostname changed
 	if err := UpdateRedmineAdminEmail(); err != nil {
 		StopRedmine()
@@ -158,7 +164,7 @@ func AddRedmineUser(username, firstname, lastname string) (int, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return 0, fmt.Errorf("unexpected status from Redmine: %s", resp.Status)
+		return 0, fmt.Errorf("unexpected status from Redmine: %s (not http.StatusCreated)", resp.Status)
 	}
 
 	var userResponse struct {
@@ -252,7 +258,7 @@ func UpdateRedmineAdminEmail() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("unexpected status from Redmine: %s", resp.Status)
+		return fmt.Errorf("unexpected status from Redmine: %s (not http.StatusNoContent)", resp.Status)
 	}
 
 	return nil
