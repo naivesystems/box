@@ -1,2 +1,3 @@
 all:
-	podman build -f Containerfile -t naive.systems/box/redmine:dev
+	@echo TAG=$(TAG)
+	podman build -f Containerfile -t naive.systems/box/redmine:$(TAG)

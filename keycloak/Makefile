@@ -1,2 +1,3 @@
 all:
-	podman build -f Containerfile -t naive.systems/box/keycloak:dev
+	@echo TAG=$(TAG)
+	podman build -f Containerfile -t naive.systems/box/keycloak:$(TAG)

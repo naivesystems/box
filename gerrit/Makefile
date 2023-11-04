@@ -1,2 +1,3 @@
 all:
-	podman build -f Containerfile -t naive.systems/box/gerrit:dev
+	@echo TAG=$(TAG)
+	podman build -f Containerfile -t naive.systems/box/gerrit:$(TAG)

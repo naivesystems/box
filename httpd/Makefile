@@ -1,2 +1,3 @@
 all:
-	podman build -f Containerfile -t naive.systems/box/httpd:dev
+	@echo TAG=$(TAG)
+	podman build -f Containerfile -t naive.systems/box/httpd:$(TAG)
