@@ -17,13 +17,21 @@ import (
 	"time"
 )
 
-var keycloakImage = flag.String("keycloak_image", "naive.systems/box/keycloak:dev", "")
+var defaultKeycloakImage = "naive.systems/box/keycloak:dev"
+var keycloakImage = flag.String("keycloak_image", defaultKeycloakImage, "")
 
 var keycloakHTTPSAddr = flag.String("keycloak_https_addr", "0.0.0.0:9992", "")
 
 var keycloakCmd *exec.Cmd
 
 func StartKeycloak() {
+	if *releaseTag != "dev" && *keycloakImage == defaultKeycloakImage {
+		err := flag.Set("keycloak_image", "ghcr.io/naivesystems/box/keycloak:"+*releaseTag)
+		if err != nil {
+			log.Fatalf("failed to set keycloak_image: %v", err)
+		}
+	}
+
 	keycloakDir := filepath.Join(*workdir, "keycloak")
 	err := os.MkdirAll(keycloakDir, 0700)
 	if err != nil {
