@@ -16,7 +16,10 @@ Layout of the workdir:
     │   ├── themes
     │   └── version.txt
     ├── mailpit
-    │   └── mails.db
+    │   ├── LICENSE
+    |   ├── mailpit
+    |   ├── mails.db
+    |   └── README.md
     ├── redmine
     │   ├── data
     │   │   ├── admin_api_key.txt
