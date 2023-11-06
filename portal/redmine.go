@@ -15,7 +15,8 @@ import (
 	"time"
 )
 
-var redmineImage = flag.String("redmine_image", "naive.systems/box/redmine:dev", "")
+var defaultRedmineImage = "naive.systems/box/redmine:dev"
+var redmineImage = flag.String("redmine_image", defaultRedmineImage, "")
 
 var redmineCmd *exec.Cmd
 
@@ -72,6 +73,13 @@ func RunRedmine() error {
 }
 
 func PodmanRunRedmine(wait bool, args ...string) (*exec.Cmd, error) {
+	if *releaseTag != "dev" && *redmineImage == defaultRedmineImage {
+		err := flag.Set("redmine_image", "ghcr.io/naivesystems/box/redmine:"+*releaseTag)
+		if err != nil {
+			log.Fatalf("failed to set redmine_image: %v", err)
+		}
+	}
+
 	dataDir := filepath.Join(*workdir, "redmine", "data")
 	err := os.MkdirAll(dataDir, 0700)
 	if err != nil {

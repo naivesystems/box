@@ -16,7 +16,8 @@ import (
 	"syscall"
 )
 
-var httpdImage = flag.String("httpd_image", "naive.systems/box/httpd:dev", "")
+var defaultHttpdImage = "naive.systems/box/httpd:dev"
+var httpdImage = flag.String("httpd_image", defaultHttpdImage, "")
 
 var httpdCmd *exec.Cmd
 
@@ -142,6 +143,13 @@ OIDCRemoteUserClaim "preferred_username"
 }
 
 func PodmanRunHttpd() error {
+	if *releaseTag != "dev" && *httpdImage == defaultHttpdImage {
+		err := flag.Set("httpd_image", "ghcr.io/naivesystems/box/httpd:"+*releaseTag)
+		if err != nil {
+			return fmt.Errorf("failed to set httpd_image: %v", err)
+		}
+	}
+
 	certsDir := filepath.Join(*workdir, "certs")
 	httpdDir := filepath.Join(*workdir, "httpd")
 	confDir := filepath.Join(httpdDir, "conf.d")

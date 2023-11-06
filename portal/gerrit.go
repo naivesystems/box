@@ -14,7 +14,8 @@ import (
 	"time"
 )
 
-var gerritImage = flag.String("gerrit_image", "naive.systems/box/gerrit:dev", "")
+var defaultGerritImage = "naive.systems/box/gerrit:dev"
+var gerritImage = flag.String("gerrit_image", defaultGerritImage, "")
 
 var gerritSSHAddr = flag.String("gerrit_ssh_addr", "0.0.0.0:29418", "")
 
@@ -68,6 +69,13 @@ func RunGerrit() error {
 }
 
 func PodmanRunGerrit(wait bool, args ...string) (*exec.Cmd, error) {
+	if *releaseTag != "dev" && *gerritImage == defaultGerritImage {
+		err := flag.Set("gerrit_image", "ghcr.io/naivesystems/box/gerrit:"+*releaseTag)
+		if err != nil {
+			return nil, fmt.Errorf("failed to set gerrit_image: %v", err)
+		}
+	}
+
 	gerritDir := filepath.Join(*workdir, "gerrit")
 
 	cmdArgs := []string{

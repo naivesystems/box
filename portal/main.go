@@ -18,6 +18,8 @@ import (
 var workdir = flag.String("workdir", "", "Absolute path to the working directory")
 var hostname = flag.String("hostname", "nsbox.local", "")
 var bindIP = flag.String("bind", "127.0.0.1", "Address behind httpd reverse proxy")
+var DefaultReleaseTag = "dev"
+var releaseTag = flag.String("release_tag", DefaultReleaseTag, "Release tag for images")
 
 func main() {
 	flag.Parse()
