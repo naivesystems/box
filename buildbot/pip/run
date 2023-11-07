@@ -12,6 +12,7 @@ distro() {
 run() {
     cd "$(dirname "${BASH_SOURCE[0]}")"
     mkdir -p output
+    distro almalinux9
     distro fedora36
     distro fedora37
     distro fedora38
