@@ -71,7 +71,7 @@ func InitSandbox(workdir string) error {
 		return fmt.Errorf("%s: %v", cmd.String(), err)
 	}
 
-	cmd = exec.Command(pip, "install", "--no-index", "--find-links="+tempDir, "buildbot[bundle]", "buildbot-www-react", "txrequests")
+	cmd = exec.Command(pip, "install", "--no-index", "--find-links="+tempDir, "wheel", "buildbot[bundle]", "buildbot-www-react", "txrequests")
 	cmd.Dir = workdir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
