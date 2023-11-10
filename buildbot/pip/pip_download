@@ -8,6 +8,7 @@ download() {
     python3 -m venv sandbox
     source sandbox/bin/activate
     pip install --upgrade pip
+    pip download -d /output 'pip'
     pip download -d /output 'wheel'
     pip download -d /output 'buildbot[bundle]==3.9.2'
     pip download -d /output 'buildbot-www-react==3.9.2'
