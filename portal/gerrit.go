@@ -113,7 +113,7 @@ func WaitGerritUp() {
 	for {
 		time.Sleep(2 * time.Second)
 		version, err := GetGerritVersion()
-		if version == "3.8.1" {
+		if version == "3.8.2" {
 			break
 		}
 		if err == nil {

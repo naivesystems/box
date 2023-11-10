@@ -6,10 +6,10 @@ set -o pipefail
 
 init() {
     cd "$HOME"
-    java -jar gerrit-3.8.1.war init --batch --install-all-plugins \
+    java -jar gerrit-3.8.2.war init --batch --install-all-plugins \
         --no-auto-start --site-path review_site
     cp review_site/etc/gerrit.config review_site/etc/gerrit.config.bak
-    echo "3.8.1" >review_site/version.txt
+    echo "3.8.2" >review_site/version.txt
 }
 
 init "$@"
