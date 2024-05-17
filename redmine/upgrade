@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+upgrade() {
+    cd "$HOME/redmine"
+    export RAILS_ENV=production
+    export REDMINE_LANG=en
+
+    echo "Migrating the database..."
+    bundle exec rake db:migrate
+
+    echo "5.0.9+nsbox.2024062101" >data/version.txt
+}
+
+upgrade "$@"
