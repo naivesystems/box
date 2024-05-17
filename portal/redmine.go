@@ -35,6 +35,36 @@ func StartRedmine() error {
 			return err
 		}
 		log.Printf("Redmine has been successfully initialized.")
+	} else {
+		bytes, err := os.ReadFile(versionFile)
+		if err != nil {
+			return fmt.Errorf("os.ReadFile(%s): %v", versionFile, err)
+		}
+		if strings.HasPrefix(string(bytes), "5.0.6+nsbox.2023110601") {
+			backupDir := filepath.Join(*workdir, "backup")
+			err := os.MkdirAll(backupDir, 0700)
+			if err != nil {
+				return fmt.Errorf("os.MkdirAll(%s): %v", backupDir, err)
+			}
+			redmineBackupDir := filepath.Join(backupDir, "redmine")
+			_ = os.RemoveAll(redmineBackupDir)
+			cmd := exec.Command("cp", "-rf", redmineDir, backupDir)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("%s: %v\n%s", cmd.String(), err, string(output))
+			}
+			log.Print("Upgrading redmine...")
+			err = UpgradeRedmine()
+			if err != nil {
+				cmd := exec.Command("cp", "-rf", redmineBackupDir, *workdir)
+				output, err := cmd.CombinedOutput()
+				if err != nil {
+					return fmt.Errorf("%s: %v\n%s", cmd.String(), err, string(output))
+				}
+				return err
+			}
+			log.Printf("Redmine has been successfully upgraded.")
+		}
 	}
 	if err := RunRedmine(); err != nil {
 		return err
@@ -57,6 +87,14 @@ func InitRedmine() error {
 	_, err := PodmanRunRedmine(true, "/home/redmine/init")
 	if err != nil {
 		return fmt.Errorf("failed to initialize Redmine: %v", err)
+	}
+	return nil
+}
+
+func UpgradeRedmine() error {
+	_, err := PodmanRunRedmine(true, "/home/redmine/upgrade")
+	if err != nil {
+		return fmt.Errorf("failed to upgrade Redmine: %v", err)
 	}
 	return nil
 }

@@ -19,9 +19,9 @@ RUN groupadd --gid $USER_GID $USERNAME \
 USER $USERNAME
 
 WORKDIR /home/$USERNAME
-RUN wget https://github.com/naivesystems/redmine/archive/refs/tags/5.0.6+nsbox.2023110601.tar.gz
+RUN wget https://github.com/naivesystems/redmine/archive/refs/tags/5.0.9+nsbox.2024062101.tar.gz
 RUN mkdir redmine
-RUN tar -xvf 5.0.6+nsbox.2023110601.tar.gz -C redmine --strip-components=1
+RUN tar -xvf 5.0.9+nsbox.2024062101.tar.gz -C redmine --strip-components=1
 
 WORKDIR /home/$USERNAME/redmine
 
@@ -35,3 +35,4 @@ RUN bundle install --without development test
 ADD init /home/$USERNAME
 ADD run /home/$USERNAME
 ADD update_settings.rb /home/$USERNAME
+ADD upgrade /home/$USERNAME
