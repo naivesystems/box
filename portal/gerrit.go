@@ -36,6 +36,36 @@ func StartGerrit() error {
 			return err
 		}
 		log.Printf("Gerrit has been successfully initialized.")
+	} else {
+		bytes, err := os.ReadFile(versionFile)
+		if err != nil {
+			return fmt.Errorf("os.ReadFile(%s): %v", versionFile, err)
+		}
+		if strings.HasPrefix(string(bytes), "3.8.2") {
+			backupDir := filepath.Join(*workdir, "backup")
+			err := os.MkdirAll(backupDir, 0700)
+			if err != nil {
+				return fmt.Errorf("os.MkdirAll(%s): %v", backupDir, err)
+			}
+			gerritBackupDir := filepath.Join(backupDir, "gerrit")
+			_ = os.RemoveAll(gerritBackupDir)
+			cmd := exec.Command("cp", "-rf", gerritDir, backupDir)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("%s: %v\n%s", cmd.String(), err, string(output))
+			}
+			log.Print("Upgrading gerrit...")
+			err = UpgradeGerrit()
+			if err != nil {
+				cmd := exec.Command("cp", "-rf", gerritBackupDir, *workdir)
+				output, err := cmd.CombinedOutput()
+				if err != nil {
+					return fmt.Errorf("%s: %v\n%s", cmd.String(), err, string(output))
+				}
+				return err
+			}
+			log.Printf("Redmine has been successfully upgraded.")
+		}
 	}
 	err = RunGerrit()
 	if err != nil {
@@ -52,6 +82,14 @@ func InitGerrit() error {
 	_, err := PodmanRunGerrit(true, "/home/gerrit/init")
 	if err != nil {
 		return fmt.Errorf("failed to initialize Gerrit: %v", err)
+	}
+	return nil
+}
+
+func UpgradeGerrit() error {
+	_, err := PodmanRunGerrit(true, "/home/gerrit/upgrade")
+	if err != nil {
+		return fmt.Errorf("failed to upgrade Gerrit: %v", err)
 	}
 	return nil
 }
@@ -113,7 +151,7 @@ func WaitGerritUp() {
 	for {
 		time.Sleep(2 * time.Second)
 		version, err := GetGerritVersion()
-		if version == "3.8.2" {
+		if version == "3.9.5" {
 			break
 		}
 		if err == nil {
