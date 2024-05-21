@@ -4,12 +4,12 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-init() {
+upgrade() {
     cd "$HOME"
     java -jar gerrit-3.9.5.war init --batch --install-all-plugins \
         --no-auto-start --site-path review_site
-    cp review_site/etc/gerrit.config review_site/etc/gerrit.config.bak
+    java -jar gerrit-3.9.5.war reindex --site-path review_site
     echo "3.9.5" >review_site/version.txt
 }
 
-init "$@"
+upgrade "$@"
