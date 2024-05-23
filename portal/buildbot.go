@@ -39,6 +39,36 @@ func StartBuildbot() error {
 			return err
 		}
 		log.Printf("Buildbot has been successfully initialized.")
+	} else {
+		bytes, err := os.ReadFile(versionFile)
+		if err != nil {
+			return fmt.Errorf("os.ReadFile(%s): %v", versionFile, err)
+		}
+		if strings.HasPrefix(string(bytes), "Buildbot version: 3.9.2") {
+			backupDir := filepath.Join(*workdir, "backup")
+			err := os.MkdirAll(backupDir, 0700)
+			if err != nil {
+				return fmt.Errorf("os.MkdirAll(%s): %v", backupDir, err)
+			}
+			buildbotBackupDir := filepath.Join(backupDir, "buildbot")
+			_ = os.RemoveAll(buildbotBackupDir)
+			cmd := exec.Command("cp", "-rf", buildbotDir, backupDir)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("%s: %v\n%s", cmd.String(), err, string(output))
+			}
+			log.Print("Upgrading buildbot...")
+			err = UpgradeBuildbot()
+			if err != nil {
+				cmd := exec.Command("cp", "-rf", buildbotBackupDir, *workdir)
+				output, err := cmd.CombinedOutput()
+				if err != nil {
+					return fmt.Errorf("%s: %v\n%s", cmd.String(), err, string(output))
+				}
+				return err
+			}
+			log.Printf("Buildbot has been successfully upgraded.")
+		}
 	}
 
 	bb = buildbot.New()
@@ -98,6 +128,29 @@ func InitBuildbot() error {
 	// write version file
 	buildbot := filepath.Join(*workdir, "buildbot", "sandbox", "bin", "buildbot")
 	cmd = exec.Command(buildbot, "--version")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %v", cmd.String(), err)
+	}
+
+	versionFile := filepath.Join(buildbotDir, "version.txt")
+	if err := os.WriteFile(versionFile, output, 0755); err != nil {
+		return fmt.Errorf("failed to write version file: %v", err)
+	}
+
+	return nil
+}
+
+func UpgradeBuildbot() error {
+	buildbotDir := filepath.Join(*workdir, "buildbot")
+
+	if err := pip.UpgradeSandbox(buildbotDir); err != nil {
+		return err
+	}
+
+	// write version file
+	buildbot := filepath.Join(*workdir, "buildbot", "sandbox", "bin", "buildbot")
+	cmd := exec.Command(buildbot, "--version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s: %v", cmd.String(), err)

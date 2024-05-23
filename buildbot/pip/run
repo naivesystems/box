@@ -11,6 +11,7 @@ distro() {
 
 run() {
     cd "$(dirname "${BASH_SOURCE[0]}")"
+    rm -rf output
     mkdir -p output
     distro almalinux9
     distro fedora36
@@ -18,7 +19,7 @@ run() {
     distro fedora38
     distro ubuntu2004
     distro ubuntu2204
-    wget -P output https://github.com/naivesystems/buildbot/releases/download/3.9.2%2Bnsbox.20230905/buildbot_www_react-3.9.2-py3-none-any.whl
+    wget -P output https://github.com/naivesystems/buildbot/releases/download/3.11.3%2Bnsbox.2024052201/buildbot_www_react-3.9.2-py3-none-any.whl
 }
 
 run "$@"

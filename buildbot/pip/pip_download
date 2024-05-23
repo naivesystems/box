@@ -10,7 +10,7 @@ download() {
     pip install --upgrade pip
     pip download -d /output 'pip'
     pip download -d /output 'wheel'
-    pip download -d /output 'buildbot[bundle]==3.9.2'
+    pip download -d /output 'buildbot[bundle]==3.11.3'
     pip download -d /output 'buildbot-www-react==3.9.2'
     pip download -d /output 'txrequests==0.9.6'
 }
