@@ -91,3 +91,47 @@ func InitSandbox(workdir string) error {
 
 	return nil
 }
+
+func UpgradeSandbox(workdir string) error {
+	tempDir, err := os.MkdirTemp("", "extracted_packages_")
+	if err != nil {
+		return fmt.Errorf("os.MkdirTemp: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	if err := extract(content, "output", tempDir); err != nil {
+		return fmt.Errorf("extract: %v", err)
+	}
+	fmt.Println("Files extracted successfully to:", tempDir)
+
+	pip := filepath.Join(workdir, "sandbox", "bin", "pip")
+
+	cmd := exec.Command(pip, "install", "--upgrade", "pip")
+	cmd.Dir = workdir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s: %v", cmd.String(), err)
+	}
+
+	cmd = exec.Command(pip, "install", "--no-index", "--find-links="+tempDir, "wheel", "buildbot[bundle]", "buildbot-www-react", "txrequests")
+	cmd.Dir = workdir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s: %v", cmd.String(), err)
+	}
+
+	buildbot := filepath.Join(workdir, "sandbox", "bin", "buildbot")
+	master := filepath.Join(workdir, "master")
+
+	cmd = exec.Command(buildbot, "upgrade-master", master)
+	cmd.Dir = workdir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s: %v", cmd.String(), err)
+	}
+
+	return nil
+}
