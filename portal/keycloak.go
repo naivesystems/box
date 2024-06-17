@@ -21,6 +21,7 @@ var defaultKeycloakImage = "naive.systems/box/keycloak:dev"
 var keycloakImage = flag.String("keycloak_image", defaultKeycloakImage, "")
 
 var keycloakHTTPSAddr = flag.String("keycloak_https_addr", "0.0.0.0:9992", "")
+var keycloakManagementAddr = flag.String("keycloak_management_addr", "0.0.0.0:9000", "")
 
 var keycloakCmd *exec.Cmd
 
@@ -40,6 +41,35 @@ func StartKeycloak() {
 	PodmanKill("keycloak")
 	versionFile := filepath.Join(keycloakDir, "version.txt")
 	if exists(versionFile) {
+		bytes, err := os.ReadFile(versionFile)
+		if err != nil {
+			log.Fatalf("os.ReadFile(%s): %v", versionFile, err)
+		}
+		if strings.Contains(string(bytes), "Keycloak - Version 23.0.1") {
+			backupDir := filepath.Join(*workdir, "backup")
+			err := os.MkdirAll(backupDir, 0700)
+			if err != nil {
+				log.Fatalf("os.MkdirAll(%s): %v", backupDir, err)
+			}
+			keycloakBackupDir := filepath.Join(backupDir, "keycloak")
+			_ = os.RemoveAll(keycloakBackupDir)
+			cmd := exec.Command("cp", "-rf", keycloakDir, backupDir)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				log.Fatalf("%s: %v\n%s", cmd.String(), err, string(output))
+			}
+			log.Print("Upgrading keycloak...")
+			UpgradeKeycloak()
+			if err != nil {
+				cmd := exec.Command("cp", "-rf", keycloakBackupDir, *workdir)
+				output, err := cmd.CombinedOutput()
+				if err != nil {
+					log.Fatalf("%s: %v\n%s", cmd.String(), err, string(output))
+				}
+				log.Fatal(err)
+			}
+			log.Printf("Keycloak has been successfully upgraded.")
+		}
 		RunKeycloak()
 		WaitKeycloakUp()
 		UpdateKeycloakRedirectURIs()
@@ -69,7 +99,7 @@ func GetKeycloakStatus() (string, error) {
 	}
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get("https://127.0.0.1:9992/health/ready")
+	resp, err := client.Get("https://127.0.0.1:9000/health/ready")
 	if err != nil {
 		return "", err
 	}
@@ -134,6 +164,22 @@ func InitKeycloak() {
 	}
 }
 
+func UpgradeKeycloak() {
+	keycloakDir := filepath.Join(*workdir, "keycloak")
+	cmd := exec.Command("podman", "run", "--rm",
+		"--name", "keycloak", "--replace",
+		"--userns=keep-id:uid=1000,gid=1000",
+		"-v", keycloakDir+":/home/keycloak/keycloak",
+		*keycloakImage,
+		"/home/keycloak/upgrade")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Fatalf("Failed to upgrade Keycloak: %v", err)
+	}
+}
+
 func RunKeycloak() {
 	certsDir := filepath.Join(*workdir, "certs")
 	keycloakDir := filepath.Join(*workdir, "keycloak")
@@ -143,6 +189,7 @@ func RunKeycloak() {
 		"-v", certsDir+":/certs",
 		"-v", keycloakDir+":/home/keycloak/keycloak",
 		"-p", *keycloakHTTPSAddr+":9992/tcp",
+		"-p", *keycloakManagementAddr+":9000/tcp",
 		"--add-host", *hostname+":127.0.0.1",
 		*keycloakImage,
 		"/home/keycloak/run", "--hostname", *hostname)

@@ -20,9 +20,10 @@ RUN ln -s /certs/nsbox.crt /etc/pki/ca-trust/source/anchors/nsbox.local.pem
 USER $USERNAME
 WORKDIR /home/$USERNAME
 
-RUN wget https://github.com/keycloak/keycloak/releases/download/23.0.1/keycloak-23.0.1.tar.gz
+RUN wget https://github.com/keycloak/keycloak/releases/download/25.0.1/keycloak-25.0.1.tar.gz
 ADD createuser /home/$USERNAME
 ADD extract /home/$USERNAME
 ADD init /home/$USERNAME
 ADD run /home/$USERNAME
 ADD update_redirect_uris /home/$USERNAME
+ADD upgrade /home/$USERNAME

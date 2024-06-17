@@ -14,7 +14,7 @@ extract() {
 
     cat /proc/sys/kernel/random/uuid >"$keycloak_home/admin_password.txt"
 
-    exec tar -xvf "$HOME/keycloak-23.0.1.tar.gz" -C "$keycloak_home" --strip-components=1
+    exec tar -xvf "$HOME/keycloak-25.0.1.tar.gz" -C "$keycloak_home" --strip-components=1
 }
 
 extract "$@"
