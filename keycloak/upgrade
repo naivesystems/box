@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+upgrade() {
+    cd "$HOME"
+    export KEYCLOAK_HOME="$HOME/keycloak"
+    export PATH="$PATH:$KEYCLOAK_HOME/bin"
+
+    kc.sh export --file $KEYCLOAK_HOME/export.json
+
+    local keycloak_upgrade="$HOME/keycloak-25.0.1"
+    mkdir -p $keycloak_upgrade
+    tar -xvf "$HOME/keycloak-25.0.1.tar.gz" -C "$keycloak_upgrade" --strip-components=1
+
+    cp -r $keycloak_upgrade/* $KEYCLOAK_HOME
+    kc.sh import --file $KEYCLOAK_HOME/export.json
+
+    rm -rf $keycloak_upgrade
+}
+
+upgrade "$@"
