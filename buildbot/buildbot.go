@@ -210,10 +210,10 @@ c['schedulers'].append(schedulers.AnyBranchScheduler(
 `, gp.Name, gp.Name, gp.Name)
 			fmt.Fprintf(w, `
 c['schedulers'].append(schedulers.ForceScheduler(
-	name='force',
+	name='force-%s',
 	builderNames=['%s presubmit']
 ))
-`, gp.Name)
+`, gp.Name, gp.Name)
 			fmt.Fprintf(w, `
 factory = util.BuildFactory()
 factory.addStep(steps.Gerrit(
