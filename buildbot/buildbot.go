@@ -197,6 +197,7 @@ c['change_source'].append(changes.GerritChangeSource(
 `, bb.Gerrit.Server, bb.Gerrit.Port, bb.IdentityFile)
 
 		for _, gp := range gps {
+			imageName := strings.ReplaceAll(gp.Name, " ", "_") + "_presubmit"
 			fmt.Fprintf(w, `
 c['schedulers'].append(schedulers.AnyBranchScheduler(
 	name='%s presubmit scheduler',
@@ -228,14 +229,21 @@ factory.addStep(steps.Gerrit(
 `, bb.Gerrit.Server, bb.Gerrit.Port, gp.ID, bb.IdentityFile)
 			fmt.Fprintf(w, `
 factory.addStep(steps.TreeSize())
+factory.addStep(steps.ShellCommand(
+	command=[
+		'podman', 'build',
+		'-f', util.Interpolate('%%(prop:builddir)s/build/Dockerfile'),
+		'-t', util.Interpolate('naive.systems/box/buildbot/%s:%%(prop:buildnumber)s'),
+		util.Interpolate('%%(prop:builddir)s/build')
+	]
+))
 factory.addStep(steps.Compile(
 	name='compile',
 	command=[
 		'podman', 'run', '--rm',
-		'--userns=keep-id:uid=1000,gid=1000',
-		'-v', util.Interpolate('%%(prop:builddir)s/build:/home/runner/work'),
-		'-w', '/home/runner/work',
-		'naive.systems/box/buildbot/runner:ubuntu2204',
+		'-v', util.Interpolate('%%(prop:builddir)s/build:/src'),
+		'-w', '/src',
+		util.Interpolate('naive.systems/box/buildbot/%s:%%(prop:buildnumber)s'),
 		'make'
 	],
 	description='compiling',
@@ -245,18 +253,23 @@ factory.addStep(steps.Test(
 	name='test',
 	command=[
 		'podman', 'run', '--rm',
-		'--userns=keep-id:uid=1000,gid=1000',
-		'-v', util.Interpolate('%%(prop:builddir)s/build:/home/runner/work'),
-		'-w', '/home/runner/work',
-		'naive.systems/box/buildbot/runner:ubuntu2204',
+		'-v', util.Interpolate('%%(prop:builddir)s/build:/src'),
+		'-w', '/src',
+		util.Interpolate('naive.systems/box/buildbot/%s:%%(prop:buildnumber)s'),
 		'make', 'test'
 	],
 	description='testing',
 	descriptionDone='tests'
 ))
+factory.addStep(steps.ShellCommand(
+	command=[
+		'podman', 'rmi', '-f',
+		util.Interpolate('naive.systems/box/buildbot/%s:%%(prop:buildnumber)s')
+	]
+))
 c['builders'].append(util.BuilderConfig(
 	name='%s presubmit',
-	`, gp.Name)
+	`, imageName, imageName, imageName, imageName, gp.Name)
 			bb.printWorkerNames(w)
 			fmt.Fprintf(w, `
 	factory=factory,
