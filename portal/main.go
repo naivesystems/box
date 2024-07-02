@@ -20,6 +20,7 @@ var hostname = flag.String("hostname", "nsbox.local", "")
 var bindIP = flag.String("bind", "127.0.0.1", "Address behind httpd reverse proxy")
 var DefaultReleaseTag = "dev"
 var releaseTag = flag.String("release_tag", DefaultReleaseTag, "Release tag for images")
+var enableTelemetry = flag.Bool("enable_telemetry", true, "Whether to send telemetry data")
 
 func main() {
 	flag.Parse()
@@ -34,6 +35,9 @@ func main() {
 	}
 	if *hostname == "" {
 		log.Fatalln("-hostname must be specified")
+	}
+	if *enableTelemetry {
+		sendTelemetry()
 	}
 	PrepareCerts()
 	StartKeycloak()
