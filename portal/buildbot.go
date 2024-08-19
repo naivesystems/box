@@ -76,7 +76,7 @@ func StartBuildbot() error {
 	bb.IdentityFile = filepath.Join(buildbotDir, "ssh", "id_ed25519")
 	bb.WorkersList = "worker,password"
 	bb.WWWProtocol = "https"
-	bb.WWWHost = *hostname
+	bb.WWWHost = *buildDomain
 	bb.PublicPort = 9443
 	bb.Gerrit.Server = *bindIP
 	bb.Gerrit.Port = 29418
@@ -344,11 +344,11 @@ func PrepareBuildbotAccountInGerrit() ([]*gerrit.Project, error) {
 	}
 
 	// Ensure the user exists
-	if err := AddGerritUser(username, "Buildbot", "buildbot@nsbox.local"); err != nil {
+	if err := AddGerritUser(username, "Buildbot", "buildbot@nsbox.internal"); err != nil {
 		return nil, fmt.Errorf("error ensuring user exists: %w", err)
 	}
 
-	client := gerrit.NewClient("http://"+*bindIP+":8081", "admin", "Administrator", "admin@nsbox.local")
+	client := gerrit.NewClient("http://"+*bindIP+":8081", "admin", "Administrator", "admin@nsbox.internal")
 	if err := client.Login(); err != nil {
 		return nil, fmt.Errorf("error logging into gerrit: %w", err)
 	}
@@ -398,7 +398,7 @@ func StopBuildbot() {
 
 func WatchGerritProjects() {
 	for {
-		client := gerrit.NewClient("http://"+*bindIP+":8081", "admin", "Administrator", "admin@nsbox.local")
+		client := gerrit.NewClient("http://"+*bindIP+":8081", "admin", "Administrator", "admin@nsbox.internal")
 		if err := client.Login(); err != nil {
 			log.Printf("WatchGerritProjects: error logging into gerrit: %v", err)
 			time.Sleep(30 * time.Second)

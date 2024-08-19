@@ -20,7 +20,7 @@ func PrepareSelfSignedKeyPair(certsDir string) {
 	}
 	cmd := exec.Command("openssl", "req", "-x509", "-newkey", "rsa:4096",
 		"-keyout", keyFile, "-noenc", "-out", crtFile, "-days", "3650",
-		"-subj", "/CN="+*hostname, "-addext", "subjectAltName=DNS:"+*hostname)
+		"-subj", "/CN="+*hostname, "-addext", "subjectAltName=DNS:"+*hostname+",DNS:"+*loginDomain)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	log.Printf("Execute command: %s", cmd.String())

@@ -16,7 +16,15 @@ import (
 )
 
 var workdir = flag.String("workdir", "", "Absolute path to the working directory")
-var hostname = flag.String("hostname", "nsbox.local", "")
+var hostname = flag.String("hostname", "nsbox.internal", "")
+var loginDomain = flag.String("login_domain", "login.nsbox.internal", "")
+var portalDomain = flag.String("portal_domain", "portal.nsbox.internal", "")
+var bugDomain = flag.String("bug_domain", "bug.nsbox.internal", "")
+var buildDomain = flag.String("build_domain", "build.nsbox.internal", "")
+var reviewDomain = flag.String("review_domain", "review.nsbox.internal", "")
+var mailDomain = flag.String("mail_domain", "mailpit.nsbox.internal", "")
+var crossDomain = flag.String("cross_domain", "x.nsbox.internal", "")
+
 var bindIP = flag.String("bind", "127.0.0.1", "Address behind httpd reverse proxy")
 var DefaultReleaseTag = "dev"
 var releaseTag = flag.String("release_tag", DefaultReleaseTag, "Release tag for images")
@@ -204,7 +212,7 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add user to Gerrit (idempotent operation)
-	err = AddGerritUser(username, firstName+" "+lastName, username+"@nsbox.local")
+	err = AddGerritUser(username, firstName+" "+lastName, username+"@nsbox.internal")
 	if err != nil {
 		http.Error(w, "Failed to add user to Gerrit: "+err.Error(), http.StatusInternalServerError)
 		return

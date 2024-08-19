@@ -6,14 +6,56 @@ set -o pipefail
 
 update_redirect_uris() {
     local realm="nsbox"
-    local hostname="nsbox.local"
+    local hostname="nsbox.internal"
+    local loginDomain="login.nsbox.internal"
+    local portalDomain="portal.nsbox.internal"
+    local bugDomain="bug.nsbox.internal"
+    local reviewDomain="review.nsbox.internal"
+    local buildDomain="build.nsbox.internal"
+    local mailDomain="mailpit.nsbox.internal"
+    local crossDomain="x.nsbox.internal"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             "--hostname")
                 shift
-                echo "Using hostname $1 instead of $hostname"
                 hostname="$1"
+                echo "Using hostname $hostname instead of nsbox.internal"
+                ;;
+            "--login-domain")
+                shift
+                loginDomain="$1"
+                echo "Using domain $loginDomain instead of login.nsbox.internal"
+                ;;
+            "--portal-domain")
+                shift
+                portalDomain="$1"
+                echo "Using domain $portalDomain instead of portal.nsbox.internal"
+                ;;
+            "--bug-domain")
+                shift
+                bugDomain="$1"
+                echo "Using domain $bugDomain instead of bug.nsbox.internal"
+                ;;
+            "--build-domain")
+                shift
+                buildDomain="$1"
+                echo "Using domain $buildDomain instead of build.nsbox.internal"
+                ;;
+            "--review-domain")
+                shift
+                reviewDomain="$1"
+                echo "Using domain $reviewDomain instead of review.nsbox.internal"
+                ;;
+            "--mail-domain")
+                shift
+                mailDomain="$1"
+                echo "Using domain $mailDomain instead of mailpit.nsbox.internal"
+                ;;
+            "--cross-domain")
+                shift
+                crossDomain="$1"
+                echo "Using domain $crossDomain instead of x.nsbox.internal"
                 ;;
             *)
                 echo "Invalid option: $1" >&2
@@ -29,19 +71,20 @@ update_redirect_uris() {
 
     sudo update-ca-trust
 
-    kcadm.sh config credentials --server "https://$hostname:9992/" \
+    kcadm.sh config credentials --server "https://${loginDomain}:9992/" \
         --realm master --user admin \
         --password "$(cat "$KEYCLOAK_HOME/admin_password.txt")"
 
     kcadm.sh update clients/"$(jq -r '.id' "$KEYCLOAK_HOME/client_secret.json")" -r "$realm" -f - <<EOF
 {
   "redirectUris": [
-    "https://$hostname:8443/*",
-    "https://$hostname:9440/*",
-    "https://$hostname:9441/*",
-    "https://$hostname:9442/*",
-    "https://$hostname:9443/*",
-    "https://$hostname:9444/*"
+    "https://$loginDomain:9443/*",
+    "https://$portalDomain:9443/*",
+    "https://$bugDomain:9443/*",
+    "https://$reviewDomain:9443/*",
+    "https://$buildDomain:9443/*",
+    "https://$mailDomain:9443/*",
+    "https://$crossDomain:9443/*"
   ],
   "webOrigins": ["+"]
 }

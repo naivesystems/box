@@ -9,7 +9,7 @@ RUN sed -i 's/^Listen 80$/Listen 8080/' /etc/httpd/conf/httpd.conf
 ADD y8080.conf /etc/httpd/conf.d
 ADD index.html /var/www/html
 
-RUN ln -s /certs/nsbox.crt /etc/pki/ca-trust/source/anchors/nsbox.local.pem
+RUN ln -s /certs/nsbox.crt /etc/pki/ca-trust/source/anchors/nsbox.internal.pem
 
 RUN mv /etc/httpd/conf.d/ssl.conf /etc/httpd/conf.d/y8443ssl.conf
 RUN sed -i 's/^Listen 443 https$/Listen 8443 https/' /etc/httpd/conf.d/y8443ssl.conf
@@ -21,10 +21,13 @@ RUN sed -i 's@</VirtualHost>@Header always set Strict-Transport-Security "max-ag
 RUN ln -s /mnt/conf.d/x0auth_openidc.conf /etc/httpd/conf.d
 ADD discover.html /var/www/html
 
-ADD z9440portal.conf /etc/httpd/conf.d
-ADD z9441redmine.conf /etc/httpd/conf.d
-ADD z9442gerrit.conf /etc/httpd/conf.d
+ADD z9443a.conf /etc/httpd/conf.d
 ADD z9443buildbot.conf /etc/httpd/conf.d
-ADD z9444mailpit.conf /etc/httpd/conf.d
+ADD z9443gerrit.conf /etc/httpd/conf.d
+ADD z9443keycloak.conf /etc/httpd/conf.d
+ADD z9443mailpit.conf /etc/httpd/conf.d
+ADD z9443portal.conf /etc/httpd/conf.d
+ADD z9443redmine.conf /etc/httpd/conf.d
+ADD z9443x.conf /etc/httpd/conf.d
 
 ADD run /usr/local/bin/run_httpd

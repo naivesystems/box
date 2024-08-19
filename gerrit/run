@@ -5,7 +5,9 @@ set -o nounset
 set -o pipefail
 
 run() {
-    local hostname="nsbox.local"
+    local hostname="nsbox.internal"
+    local reviewDomain="review.nsbox.internal"
+    local bugDomain="bug.nsbox.internal"
     local httpBindIP="127.0.0.1"
     local sshListen="0.0.0.0:29418"
     local sshAdvertise="$hostname:29418"
@@ -17,6 +19,16 @@ run() {
                 echo "Using hostname $1 instead of $hostname"
                 hostname="$1"
                 sshAdvertise="$hostname:29418"
+                ;;
+            "--review-domain")
+                shift
+                echo "Using domain $1 instead of $reviewDomain"
+                reviewDomain="$1"
+                ;;
+            "--bug-domain")
+                shift
+                echo "Using domain $1 instead of $bugDomain"
+                bugDomain="$1"
                 ;;
             "--http-bind")
                 shift
@@ -47,15 +59,15 @@ run() {
 
     cp review_site/etc/gerrit.config.bak review_site/etc/gerrit.config
 
-    git config -f review_site/etc/gerrit.config gerrit.canonicalWebUrl "https://$hostname:9442/"
+    git config -f review_site/etc/gerrit.config gerrit.canonicalWebUrl "https://$reviewDomain:9443/"
     git config -f review_site/etc/gerrit.config plugins.allowRemoteAdmin false
     git config -f review_site/etc/gerrit.config auth.type HTTP
-    git config -f review_site/etc/gerrit.config auth.logoutUrl "/OIDCRedirectURI?logout=https%3A%2F%2F$hostname%3A9442%2F"
+    git config -f review_site/etc/gerrit.config auth.logoutUrl "/OIDCRedirectURI?logout=https%3A%2F%2F$reviewDomain%3A9443%2F"
     git config -f review_site/etc/gerrit.config auth.userNameToLowerCase true
     git config -f review_site/etc/gerrit.config auth.httpHeader REMOTE_USER
     git config -f review_site/etc/gerrit.config auth.httpDisplaynameHeader OIDC_CLAIM_name
     git config -f review_site/etc/gerrit.config auth.httpEmailHeader OIDC_CLAIM_email
-    git config -f review_site/etc/gerrit.config auth.emailFormat "{0}@nsbox.local"
+    git config -f review_site/etc/gerrit.config auth.emailFormat "{0}@nsbox.internal"
     git config -f review_site/etc/gerrit.config auth.allowRegisterNewEmail false
     git config -f review_site/etc/gerrit.config auth.enableRunAs false
     git config -f review_site/etc/gerrit.config receive.timeout 15min
@@ -96,25 +108,25 @@ run() {
     git config -f review_site/etc/gerrit.config download.scheme ssh
     git config -f review_site/etc/gerrit.config download.archive off
 
-    cat <<'EOF' | sed "s/HOSTNAME/$hostname/g" >>review_site/etc/gerrit.config
+    cat <<'EOF' | sed "s/HOSTNAME/${bugDomain}/g" >>review_site/etc/gerrit.config
 [commentlink "change_id"]
 	match = (I[0-9a-f]{8,40})
 	link = "#/q/$1"
 [commentlink "b_link"]
 	match = (b/)(\\d+)
-	link = https://HOSTNAME:9441/issues/$2
+	link = https://HOSTNAME:9443/issues/$2
 [commentlink "bug_link"]
 	match = "([Bb]ug\\s+#?)(\\d+)"
-	link = https://HOSTNAME:9441/issues/$2
+	link = https://HOSTNAME:9443/issues/$2
 [commentlink "task_link"]
 	match = "([Tt]ask\\s+#?)(\\d+)"
-	link = https://HOSTNAME:9441/issues/$2
+	link = https://HOSTNAME:9443/issues/$2
 [commentlink "issue_link"]
 	match = "([Ii]ssue\\s+#?)(\\d+)"
-	link = https://HOSTNAME:9441/issues/$2
+	link = https://HOSTNAME:9443/issues/$2
 [commentlink "bug_id"]
 	match = (Bug-Id:\\s+)(\\d+)
-	link = https://HOSTNAME:9441/issues/$2
+	link = https://HOSTNAME:9443/issues/$2
 	prefix = $1
 	text = $2
 [plugin "code-owners"]
