@@ -108,10 +108,10 @@ OIDCSessionType server-cache:persistent
 OIDCCacheType file
 OIDCCacheDir /var/cache/httpd/mod_auth_openidc/cache
 OIDCCacheFileCleanInterval 72000
-OIDCDiscoverURL "https://%s:9443/discover.html"
-OIDCDefaultURL "https://%s:9443/index.html"
+OIDCDiscoverURL "https://%s:%s/discover.html"
+OIDCDefaultURL "https://%s:%s/index.html"
 OIDCRemoteUserClaim "preferred_username"
-`, passphrase, clientSecret, *hostname, *crossDomain, *crossDomain)
+`, passphrase, clientSecret, *hostname, *crossDomain, *bindPort, *crossDomain, *bindPort)
 
 	oidcConf := filepath.Join(confDir, "x0auth_openidc.conf")
 	err = os.WriteFile(oidcConf, []byte(confStr), 0600)
@@ -120,7 +120,7 @@ OIDCRemoteUserClaim "preferred_username"
 	}
 
 	// Generate metadata
-	providerPath := filepath.Join(metadataDir, *loginDomain+"%3A9443%2Frealms%2Fnsbox.provider")
+	providerPath := filepath.Join(metadataDir, *loginDomain+"%3A"+*bindPort+"%2Frealms%2Fnsbox.provider")
 	err = WriteOpenIDConfiguration(providerPath)
 	if err != nil {
 		return err
@@ -133,7 +133,7 @@ OIDCRemoteUserClaim "preferred_username"
 }
 `, clientSecret)
 
-	clientPath := filepath.Join(metadataDir, *loginDomain+"%3A9443%2Frealms%2Fnsbox.client")
+	clientPath := filepath.Join(metadataDir, *loginDomain+"%3A"+*bindPort+"%2Frealms%2Fnsbox.client")
 	err = os.WriteFile(clientPath, []byte(clientStr), 0600)
 	if err != nil {
 		return err
@@ -172,7 +172,8 @@ func PodmanRunHttpd() error {
 		"--build-domain", *buildDomain,
 		"--review-domain", *reviewDomain,
 		"--mail-domain", *mailDomain,
-		"--cross-domain", *crossDomain)
+		"--cross-domain", *crossDomain,
+	    "--http-port", *bindPort)
 	if err := RedirectPipes(httpdCmd, "H", "\033[0;35m"); err != nil {
 		return fmt.Errorf("failed to redirect pipes: %v", err)
 	}

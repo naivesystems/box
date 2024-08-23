@@ -100,6 +100,7 @@ func RunGerrit() error {
 		"--review-domain", *reviewDomain,
 		"--bug-domain", *bugDomain,
 		"--http-bind", *bindIP,
+		"--http-port", *bindPort,
 		"--ssh-listen", *gerritSSHAddr)
 	if err != nil {
 		return fmt.Errorf("failed to start Gerrit: %v", err)

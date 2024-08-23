@@ -15,6 +15,7 @@ init() {
     local buildDomain="build.nsbox.internal"
     local mailDomain="mailpit.nsbox.internal"
     local crossDomain="x.nsbox.internal"
+    local httpBindPort="9443"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -58,6 +59,11 @@ init() {
                 crossDomain="$1"
                 echo "Using domain $crossDomain instead of x.nsbox.internal"
                 ;;
+            "--http-port")
+                shift
+                echo "Using HTTP bind port $1 instead of $httpBindPort"
+                httpBindPort="$1"
+                ;;
             *)
                 echo "Invalid option: $1" >&2
                 exit 1
@@ -82,13 +88,13 @@ init() {
 {
   "clientId": "httpd",
   "redirectUris": [
-    "https://$loginDomain:9443/*",
-    "https://$portalDomain:9443/*",
-    "https://$bugDomain:9443/*",
-    "https://$reviewDomain:9443/*",
-    "https://$buildDomain:9443/*",
-    "https://$mailDomain:9443/*",
-    "https://$crossDomain:9443/*"
+    "https://$loginDomain:$httpBindPort/*",
+    "https://$portalDomain:$httpBindPort/*",
+    "https://$bugDomain:$httpBindPort/*",
+    "https://$reviewDomain:$httpBindPort/*",
+    "https://$buildDomain:$httpBindPort/*",
+    "https://$mailDomain:$httpBindPort/*",
+    "https://$crossDomain:$httpBindPort/*"
   ],
   "webOrigins": ["+"]
 }

@@ -103,7 +103,8 @@ func RunRedmine() error {
 	cmd, err := PodmanRunRedmine(false, "/home/redmine/run",
 		"--bind", *bindIP,
 		"--hostname", *hostname,
-		"--bug-domain", *bugDomain)
+		"--bug-domain", *bugDomain,
+		"--http-port", *bindPort)
 	if err != nil {
 		return fmt.Errorf("failed to start Redmine: %v", err)
 	}

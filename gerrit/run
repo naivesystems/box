@@ -9,6 +9,7 @@ run() {
     local reviewDomain="review.nsbox.internal"
     local bugDomain="bug.nsbox.internal"
     local httpBindIP="127.0.0.1"
+    local httpBindPort="9443"
     local sshListen="0.0.0.0:29418"
     local sshAdvertise="$hostname:29418"
 
@@ -35,6 +36,11 @@ run() {
                 echo "Using HTTP bind IP $1 instead of $httpBindIP"
                 httpBindIP="$1"
                 ;;
+            "--http-port")
+                shift
+                echo "Using HTTP bind port $1 instead of $httpBindPort"
+                httpBindPort="$1"
+                ;;
             "--ssh-listen")
                 shift
                 echo "Using sshd.listenAddress $1 instead of $sshListen"
@@ -59,10 +65,10 @@ run() {
 
     cp review_site/etc/gerrit.config.bak review_site/etc/gerrit.config
 
-    git config -f review_site/etc/gerrit.config gerrit.canonicalWebUrl "https://$reviewDomain:9443/"
+    git config -f review_site/etc/gerrit.config gerrit.canonicalWebUrl "https://$reviewDomain:$httpBindPort/"
     git config -f review_site/etc/gerrit.config plugins.allowRemoteAdmin false
     git config -f review_site/etc/gerrit.config auth.type HTTP
-    git config -f review_site/etc/gerrit.config auth.logoutUrl "/OIDCRedirectURI?logout=https%3A%2F%2F$reviewDomain%3A9443%2F"
+    git config -f review_site/etc/gerrit.config auth.logoutUrl "/OIDCRedirectURI?logout=https%3A%2F%2F$reviewDomain%3A$httpBindPort%2F"
     git config -f review_site/etc/gerrit.config auth.userNameToLowerCase true
     git config -f review_site/etc/gerrit.config auth.httpHeader REMOTE_USER
     git config -f review_site/etc/gerrit.config auth.httpDisplaynameHeader OIDC_CLAIM_name
@@ -108,7 +114,7 @@ run() {
     git config -f review_site/etc/gerrit.config download.scheme ssh
     git config -f review_site/etc/gerrit.config download.archive off
 
-    cat <<'EOF' | sed "s/HOSTNAME/${bugDomain}/g" >>review_site/etc/gerrit.config
+    cat <<'EOF' | sed "s/HOSTNAME:9443/$bugDomain:$httpBindPort/g" >>review_site/etc/gerrit.config
 [commentlink "change_id"]
 	match = (I[0-9a-f]{8,40})
 	link = "#/q/$1"

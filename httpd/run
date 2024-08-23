@@ -13,6 +13,7 @@ run() {
     local buildDomain="build.nsbox.internal"
     local mailDomain="mailpit.nsbox.internal"
     local crossDomain="x.nsbox.internal"
+    local httpBindPort="9443"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -56,6 +57,11 @@ run() {
                 crossDomain="$1"
                 echo "Using domain $crossDomain instead of x.nsbox.internal"
                 ;;
+            "--http-port")
+                shift
+                echo "Using HTTP bind port $1 instead of $httpBindPort"
+                httpBindPort="$1"
+                ;;
             *)
                 echo "Invalid option: $1" >&2
                 exit 1
@@ -69,13 +75,22 @@ run() {
     # For talking to Keycloak
     grep host.containers.internal /etc/hosts | sed "s/host.containers.internal/${loginDomain}/" >>/etc/hosts
     chown -R apache:apache /var/cache/httpd/mod_auth_openidc/metadata
-    sed -i "s@https://127.0.0.1:9992/@https://${loginDomain}:9443/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
-    sed -i "s@https://${loginDomain}:9992/@https://${loginDomain}:9443/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
+    sed -i "s@https://127.0.0.1:9992/@https://$loginDomain:$httpBindPort/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
+    sed -i "s@https://$loginDomain:9992/@https://$loginDomain:$httpBindPort/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
 
-    sed -i "s/HOSTNAME:9992/${loginDomain}:9443/" /var/www/html/discover.html
+    sed -i "s/HOSTNAME:9992/$loginDomain:$httpBindPort/" /var/www/html/discover.html
 
     cd /etc/httpd
     sed -i "s/#ServerName www.example.com:80/ServerName $hostname:8080/" conf/httpd.conf
+
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443a.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443buildbot.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443gerrit.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443keycloak.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443mailpit.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443portal.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443redmine.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443x.conf
 
     sed -i "s/build.nsbox.internal/$buildDomain/" conf.d/z9443buildbot.conf
     sed -i "s/review.nsbox.internal/$reviewDomain/" conf.d/z9443gerrit.conf

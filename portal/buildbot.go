@@ -71,13 +71,15 @@ func StartBuildbot() error {
 		}
 	}
 
+	port, _ := strconv.Atoi(*bindPort)
+
 	bb = buildbot.New()
 	bb.WorkDir = buildbotDir
 	bb.IdentityFile = filepath.Join(buildbotDir, "ssh", "id_ed25519")
 	bb.WorkersList = "worker,password"
 	bb.WWWProtocol = "https"
 	bb.WWWHost = *buildDomain
-	bb.PublicPort = 9443
+	bb.PublicPort = port
 	bb.Gerrit.Server = *bindIP
 	bb.Gerrit.Port = 29418
 

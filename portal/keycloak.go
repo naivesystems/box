@@ -162,7 +162,8 @@ func InitKeycloak() {
 		"--build-domain", *buildDomain,
 		"--review-domain", *reviewDomain,
 		"--mail-domain", *mailDomain,
-		"--cross-domain", *crossDomain)
+		"--cross-domain", *crossDomain,
+		"--http-port", *bindPort)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
@@ -220,7 +221,8 @@ func UpdateKeycloakRedirectURIs() {
 		"--build-domain", *buildDomain,
 		"--review-domain", *reviewDomain,
 		"--mail-domain", *mailDomain,
-		"--cross-domain", *crossDomain)
+		"--cross-domain", *crossDomain,
+		"--http-port", *bindPort)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
