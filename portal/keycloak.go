@@ -244,6 +244,7 @@ func AddKeycloakUser(username, firstname, lastname string) (string, error) {
 
 	cmd := exec.Command("podman", "exec", "keycloak",
 		"/home/keycloak/createuser",
+		"--hostname", *hostname,
 		"--login-domain", *loginDomain,
 		"--username", username,
 		"--first-name", firstname,

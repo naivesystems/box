@@ -6,6 +6,7 @@ set -o pipefail
 
 createuser() {
     local realm="nsbox"
+    local hostname="nsbox.internal"
     local loginDomain="login.nsbox.internal"
 
     # Initialize variables with default or empty values
@@ -15,6 +16,11 @@ createuser() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            "--hostname")
+                shift
+                hostname="$1"
+                echo "Using hostname $hostname instead of nsbox.internal"
+                ;;
             "--login-domain")
                 shift
                 loginDomain="$1"
@@ -45,7 +51,7 @@ createuser() {
         exit 1
     fi
 
-    local email="$username@nsbox.internal"
+    local email="$username@$hostname"
 
     cd "$HOME"
     export KEYCLOAK_HOME="$HOME/keycloak"

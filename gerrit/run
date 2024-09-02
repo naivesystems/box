@@ -73,7 +73,7 @@ run() {
     git config -f review_site/etc/gerrit.config auth.httpHeader REMOTE_USER
     git config -f review_site/etc/gerrit.config auth.httpDisplaynameHeader OIDC_CLAIM_name
     git config -f review_site/etc/gerrit.config auth.httpEmailHeader OIDC_CLAIM_email
-    git config -f review_site/etc/gerrit.config auth.emailFormat "{0}@nsbox.internal"
+    git config -f review_site/etc/gerrit.config auth.emailFormat "{0}@$hostname"
     git config -f review_site/etc/gerrit.config auth.allowRegisterNewEmail false
     git config -f review_site/etc/gerrit.config auth.enableRunAs false
     git config -f review_site/etc/gerrit.config receive.timeout 15min

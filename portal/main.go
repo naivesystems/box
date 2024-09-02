@@ -221,7 +221,7 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add user to Gerrit (idempotent operation)
-	err = AddGerritUser(username, firstName+" "+lastName, username+"@nsbox.internal")
+	err = AddGerritUser(username, firstName+" "+lastName, username+"@"+*hostname)
 	if err != nil {
 		http.Error(w, "Failed to add user to Gerrit: "+err.Error(), http.StatusInternalServerError)
 		return

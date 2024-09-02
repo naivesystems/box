@@ -72,7 +72,7 @@ func StartGerrit() error {
 		return err
 	}
 	WaitGerritUp()
-	if err := AddGerritUser("admin", "Administrator", "admin@nsbox.internal"); err != nil {
+	if err := AddGerritUser("admin", "Administrator", "admin@"+*hostname); err != nil {
 		return err
 	}
 	return nil
