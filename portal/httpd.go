@@ -120,7 +120,11 @@ OIDCRemoteUserClaim "preferred_username"
 	}
 
 	// Generate metadata
-	providerPath := filepath.Join(metadataDir, *loginDomain+"%3A"+*bindPort+"%2Frealms%2Fnsbox.provider")
+	port := ""
+	if *bindPort != "443" {
+		port = "%3A"+*bindPort
+	}
+	providerPath := filepath.Join(metadataDir, *loginDomain+port+"%2Frealms%2Fnsbox.provider")
 	err = WriteOpenIDConfiguration(providerPath)
 	if err != nil {
 		return err
@@ -133,7 +137,7 @@ OIDCRemoteUserClaim "preferred_username"
 }
 `, clientSecret)
 
-	clientPath := filepath.Join(metadataDir, *loginDomain+"%3A"+*bindPort+"%2Frealms%2Fnsbox.client")
+	clientPath := filepath.Join(metadataDir, *loginDomain+port+"%2Frealms%2Fnsbox.client")
 	err = os.WriteFile(clientPath, []byte(clientStr), 0600)
 	if err != nil {
 		return err

@@ -75,10 +75,15 @@ run() {
     # For talking to Keycloak
     grep host.containers.internal /etc/hosts | sed "s/host.containers.internal/${loginDomain}/" >>/etc/hosts
     chown -R apache:apache /var/cache/httpd/mod_auth_openidc/metadata
-    sed -i "s@https://127.0.0.1:9992/@https://$loginDomain:$httpBindPort/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
-    sed -i "s@https://$loginDomain:9992/@https://$loginDomain:$httpBindPort/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
+    local port=":$httpBindPort"
+    if [[ "$httpBindPort" == "443" ]]; then
+        port=""
+    fi
 
-    sed -i "s/HOSTNAME:9992/$loginDomain:$httpBindPort/" /var/www/html/discover.html
+    sed -i "s@https://127.0.0.1:9992/@https://$loginDomain$port/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
+    sed -i "s@https://$loginDomain:9992/@https://$loginDomain$port/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
+
+    sed -i "s/HOSTNAME:9992/$loginDomain$port/" /var/www/html/discover.html
 
     cd /etc/httpd
     sed -i "s/#ServerName www.example.com:80/ServerName $hostname:8080/" conf/httpd.conf

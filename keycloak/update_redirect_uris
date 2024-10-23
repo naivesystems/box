@@ -84,6 +84,13 @@ update_redirect_uris() {
     kcadm.sh update clients/"$(jq -r '.id' "$KEYCLOAK_HOME/client_secret.json")" -r "$realm" -f - <<EOF
 {
   "redirectUris": [
+    "https://$loginDomain/",
+    "https://$portalDomain/*",
+    "https://$bugDomain/*",
+    "https://$reviewDomain/*",
+    "https://$buildDomain/*",
+    "https://$mailDomain/*",
+    "https://$crossDomain/*",
     "https://$loginDomain:$httpBindPort/*",
     "https://$portalDomain:$httpBindPort/*",
     "https://$bugDomain:$httpBindPort/*",

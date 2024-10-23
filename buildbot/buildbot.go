@@ -152,7 +152,11 @@ class NsboxRemoteUserAuth(util.RemoteUserAuth):
 c = BuildmasterConfig = {}
 c['buildbotNetUsageData'] = None
 `)
-	fmt.Fprintf(w, "c['buildbotURL'] = '%s://%s:%d/'\n", bb.WWWProtocol, bb.WWWHost, bb.PublicPort)
+	if bb.PublicPort == 443 {
+		fmt.Fprintf(w, "c['buildbotURL'] = '%s://%s/'\n", bb.WWWProtocol, bb.WWWHost)
+	} else {
+		fmt.Fprintf(w, "c['buildbotURL'] = '%s://%s:%d/'\n", bb.WWWProtocol, bb.WWWHost, bb.PublicPort)
+	}
 	fmt.Fprintf(w, "c['db'] = {'db_url': '%s'}\n", bb.dbURL)
 	fmt.Fprintf(w, "c['protocols'] = {'pb': {'port': 'tcp:%d:interface=%s'}}\n", bb.pbPort, bb.pbHost)
 	fmt.Fprint(w, "c['title'] = 'Buildbot'\n")

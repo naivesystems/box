@@ -88,6 +88,13 @@ init() {
 {
   "clientId": "httpd",
   "redirectUris": [
+    "https://$loginDomain/",
+    "https://$portalDomain/*",
+    "https://$bugDomain/*",
+    "https://$reviewDomain/*",
+    "https://$buildDomain/*",
+    "https://$mailDomain/*",
+    "https://$crossDomain/*",
     "https://$loginDomain:$httpBindPort/*",
     "https://$portalDomain:$httpBindPort/*",
     "https://$bugDomain:$httpBindPort/*",
