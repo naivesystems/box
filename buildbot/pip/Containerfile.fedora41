@@ -1,0 +1,6 @@
+FROM fedora:41
+RUN dnf update -y && dnf install -y \
+python3-pip \
+&& dnf clean all
+
+ADD pip_download /usr/local/bin/pip_download
