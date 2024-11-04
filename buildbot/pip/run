@@ -17,8 +17,12 @@ run() {
     distro fedora36
     distro fedora37
     distro fedora38
+    distro fedora39
+    distro fedora40
+    distro fedora41
     distro ubuntu2004
     distro ubuntu2204
+    distro ubuntu2404
     wget -P output https://github.com/naivesystems/buildbot/releases/download/3.11.3%2Bnsbox.2024052201/buildbot_www_react-3.9.2-py3-none-any.whl
 }
 
