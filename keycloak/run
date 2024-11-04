@@ -5,14 +5,14 @@ set -o nounset
 set -o pipefail
 
 run() {
-    local hostname="nsbox.local"
+    local loginDomain="login.nsbox.internal"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            "--hostname")
+            "--login-domain")
                 shift
-                hostname="$1"
-                echo "Using hostname $hostname instead of nsbox.local"
+                loginDomain=$1
+                echo "Using domain $loginDomain instead of login.nsbox.internal"
                 ;;
             *)
                 echo "Invalid option: $1" >&2
@@ -24,17 +24,18 @@ run() {
 
     cd "$HOME"
     openssl pkcs12 -export -in /certs/nsbox.crt -inkey /certs/nsbox.key \
-        -out nsbox.p12 -name "$hostname" -passout pass:changeit456
+        -out nsbox.p12 -name "$loginDomain" -passout pass:changeit456
     keytool -importkeystore -deststorepass changeit123 \
         -destkeypass changeit123 -destkeystore nsbox.keystore \
         -srckeystore nsbox.p12 -srcstoretype PKCS12 -srcstorepass changeit456 \
-        -alias "$hostname"
+        -alias "$loginDomain"
 
     cd "$HOME/keycloak"
     export KEYCLOAK_ADMIN="admin"
     export KEYCLOAK_ADMIN_PASSWORD="$(cat "$HOME/keycloak/admin_password.txt")"
     exec "$HOME/keycloak/bin/kc.sh" start \
-        --hostname="$hostname" --https-port=9992 --https-protocols=TLSv1.2 \
+        --proxy-headers xforwarded \
+        --hostname="$loginDomain" --https-port=9992 --https-protocols=TLSv1.2 \
         --https-key-store-file="$HOME/nsbox.keystore" \
         --https-key-store-password=changeit123 \
         --health-enabled=true \

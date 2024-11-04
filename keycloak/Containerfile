@@ -15,7 +15,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
 && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
 && chmod 0440 /etc/sudoers.d/$USERNAME
 
-RUN ln -s /certs/nsbox.crt /etc/pki/ca-trust/source/anchors/nsbox.local.pem
+RUN ln -s /certs/nsbox.crt /etc/pki/ca-trust/source/anchors/nsbox.internal.pem
 
 USER $USERNAME
 WORKDIR /home/$USERNAME

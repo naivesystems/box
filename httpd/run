@@ -5,14 +5,62 @@ set -o nounset
 set -o pipefail
 
 run() {
-    local hostname="nsbox.local"
+    local hostname="nsbox.internal"
+    local loginDomain="login.nsbox.internal"
+    local portalDomain="portal.nsbox.internal"
+    local bugDomain="bug.nsbox.internal"
+    local reviewDomain="review.nsbox.internal"
+    local buildDomain="build.nsbox.internal"
+    local mailDomain="mailpit.nsbox.internal"
+    local crossDomain="x.nsbox.internal"
+    local httpBindPort="9443"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             "--hostname")
                 shift
                 hostname="$1"
-                echo "Using hostname $hostname instead of nsbox.local"
+                echo "Using hostname $hostname instead of nsbox.internal"
+                ;;
+            "--login-domain")
+                shift
+                loginDomain="$1"
+                echo "Using domain $loginDomain instead of login.nsbox.internal"
+                ;;
+            "--portal-domain")
+                shift
+                portalDomain="$1"
+                echo "Using domain $portalDomain instead of portal.nsbox.internal"
+                ;;
+            "--bug-domain")
+                shift
+                bugDomain="$1"
+                echo "Using domain $bugDomain instead of bug.nsbox.internal"
+                ;;
+            "--build-domain")
+                shift
+                buildDomain="$1"
+                echo "Using domain $buildDomain instead of build.nsbox.internal"
+                ;;
+            "--review-domain")
+                shift
+                reviewDomain="$1"
+                echo "Using domain $reviewDomain instead of review.nsbox.internal"
+                ;;
+            "--mail-domain")
+                shift
+                mailDomain="$1"
+                echo "Using domain $mailDomain instead of mailpit.nsbox.internal"
+                ;;
+            "--cross-domain")
+                shift
+                crossDomain="$1"
+                echo "Using domain $crossDomain instead of x.nsbox.internal"
+                ;;
+            "--http-port")
+                shift
+                echo "Using HTTP bind port $1 instead of $httpBindPort"
+                httpBindPort="$1"
                 ;;
             *)
                 echo "Invalid option: $1" >&2
@@ -25,16 +73,37 @@ run() {
     update-ca-trust
 
     # For talking to Keycloak
-    grep host.containers.internal /etc/hosts | sed "s/host.containers.internal/$hostname/" >>/etc/hosts
+    grep host.containers.internal /etc/hosts | sed "s/host.containers.internal/${loginDomain}/" >>/etc/hosts
     chown -R apache:apache /var/cache/httpd/mod_auth_openidc/metadata
-    sed -i "s@https://127.0.0.1:9992/@https://$hostname:9992/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
+    local port=":$httpBindPort"
+    if [[ "$httpBindPort" == "443" ]]; then
+        port=""
+    fi
 
-    sed -i "s/HOSTNAME/$hostname/" /var/www/html/discover.html
+    sed -i "s@https://127.0.0.1:9992/@https://$loginDomain$port/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
+    sed -i "s@https://$loginDomain:9992/@https://$loginDomain$port/@g" /var/cache/httpd/mod_auth_openidc/metadata/*.provider
+
+    sed -i "s/HOSTNAME:9992/$loginDomain$port/" /var/www/html/discover.html
 
     cd /etc/httpd
     sed -i "s/#ServerName www.example.com:80/ServerName $hostname:8080/" conf/httpd.conf
-    sed -i "s/#ServerName www.example.com:443/ServerName $hostname:8443/" conf.d/y8443ssl.conf
-    sed -i "s/localhost/$hostname/" conf.d/y8443ssl.conf
+
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443a.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443buildbot.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443gerrit.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443keycloak.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443mailpit.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443portal.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443redmine.conf
+    sed -i "s/9443/$httpBindPort/" conf.d/z9443x.conf
+
+    sed -i "s/build.nsbox.internal/$buildDomain/" conf.d/z9443buildbot.conf
+    sed -i "s/review.nsbox.internal/$reviewDomain/" conf.d/z9443gerrit.conf
+    sed -i "s/login.nsbox.internal/$loginDomain/" conf.d/z9443keycloak.conf
+    sed -i "s/mailpit.nsbox.internal/$mailDomain/" conf.d/z9443mailpit.conf
+    sed -i "s/portal.nsbox.internal/$portalDomain/" conf.d/z9443portal.conf
+    sed -i "s/bug.nsbox.internal/$bugDomain/" conf.d/z9443redmine.conf
+    sed -i "s/x.nsbox.internal/$crossDomain/" conf.d/z9443x.conf
 
     # httpd abuses SIGWINCH as the signal for graceful stop. When running the
     # portal in vscode terminal, resizing the terminal causes SIGWINCH to be

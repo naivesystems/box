@@ -6,7 +6,8 @@ set -o pipefail
 
 createuser() {
     local realm="nsbox"
-    local hostname="nsbox.local"
+    local hostname="nsbox.internal"
+    local loginDomain="login.nsbox.internal"
 
     # Initialize variables with default or empty values
     local username=""
@@ -18,7 +19,12 @@ createuser() {
             "--hostname")
                 shift
                 hostname="$1"
-                echo "Using hostname $hostname instead of nsbox.local"
+                echo "Using hostname $hostname instead of nsbox.internal"
+                ;;
+            "--login-domain")
+                shift
+                loginDomain="$1"
+                echo "Using domain $loginDomain instead of login.nsbox.internal"
                 ;;
             "--username")
                 shift
@@ -45,7 +51,7 @@ createuser() {
         exit 1
     fi
 
-    local email="$username@nsbox.local"
+    local email="$username@$hostname"
 
     cd "$HOME"
     export KEYCLOAK_HOME="$HOME/keycloak"
@@ -56,7 +62,7 @@ createuser() {
 
     sudo update-ca-trust
 
-    kcadm.sh config credentials --server "https://$hostname:9992/" \
+    kcadm.sh config credentials --server "https://${loginDomain}:9992/" \
         --realm master --user admin \
         --password "$(cat "$KEYCLOAK_HOME/admin_password.txt")"
 

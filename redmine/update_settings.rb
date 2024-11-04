@@ -7,6 +7,14 @@ OptionParser.new do |opts|
   opts.on("--hostname HOSTNAME", "Set the hostname") do |value|
     options[:hostname] = value
   end
+  opts.on('--bug-domain BUGDOMAIN',
+          'Set the domain of redmine') do |domain|
+    options[:bugDomain] = domain
+  end
+  opts.on('--http-port HTTPPORT',
+          'Set the domain of redmine') do |port|
+    options[:httpPort] = port
+  end
 end.parse!
 
 file_path = 'config/settings.yml'
@@ -14,7 +22,7 @@ settings = YAML.load_file(file_path)
 
 # General
 ## Host name and path
-settings['host_name']['default'] = options[:hostname] + ':9441'
+settings['host_name']['default'] = options[:bugDomain] + ':' + options[:httpPort]
 ## Protocol
 settings['protocol']['default'] = 'https'
 ## Text formatting

@@ -155,7 +155,15 @@ func ExtractKeycloak() {
 
 func InitKeycloak() {
 	cmd := exec.Command("podman", "exec", "keycloak",
-		"/home/keycloak/init", "--hostname", *hostname)
+		"/home/keycloak/init", "--hostname", *hostname,
+		"--login-domain", *loginDomain,
+		"--portal-domain", *portalDomain,
+		"--bug-domain", *bugDomain,
+		"--build-domain", *buildDomain,
+		"--review-domain", *reviewDomain,
+		"--mail-domain", *mailDomain,
+		"--cross-domain", *crossDomain,
+		"--http-port", *bindPort)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
@@ -190,9 +198,9 @@ func RunKeycloak() {
 		"-v", keycloakDir+":/home/keycloak/keycloak",
 		"-p", *keycloakHTTPSAddr+":9992/tcp",
 		"-p", *keycloakManagementAddr+":9000/tcp",
-		"--add-host", *hostname+":127.0.0.1",
+		"--add-host", *loginDomain+":127.0.0.1",
 		*keycloakImage,
-		"/home/keycloak/run", "--hostname", *hostname)
+		"/home/keycloak/run", "--login-domain", *loginDomain)
 	err := RedirectPipes(keycloakCmd, "K", "\033[0;33m")
 	if err != nil {
 		log.Fatalf("Failed to redirect pipes: %v", err)
@@ -206,7 +214,15 @@ func RunKeycloak() {
 
 func UpdateKeycloakRedirectURIs() {
 	cmd := exec.Command("podman", "exec", "keycloak",
-		"/home/keycloak/update_redirect_uris", "--hostname", *hostname)
+		"/home/keycloak/update_redirect_uris", "--hostname", *hostname,
+		"--login-domain", *loginDomain,
+		"--portal-domain", *portalDomain,
+		"--bug-domain", *bugDomain,
+		"--build-domain", *buildDomain,
+		"--review-domain", *reviewDomain,
+		"--mail-domain", *mailDomain,
+		"--cross-domain", *crossDomain,
+		"--http-port", *bindPort)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
@@ -229,6 +245,7 @@ func AddKeycloakUser(username, firstname, lastname string) (string, error) {
 	cmd := exec.Command("podman", "exec", "keycloak",
 		"/home/keycloak/createuser",
 		"--hostname", *hostname,
+		"--login-domain", *loginDomain,
 		"--username", username,
 		"--first-name", firstname,
 		"--last-name", lastname)

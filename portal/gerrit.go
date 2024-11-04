@@ -72,7 +72,7 @@ func StartGerrit() error {
 		return err
 	}
 	WaitGerritUp()
-	if err := AddGerritUser("admin", "Administrator", "admin@nsbox.local"); err != nil {
+	if err := AddGerritUser("admin", "Administrator", "admin@"+*hostname); err != nil {
 		return err
 	}
 	return nil
@@ -97,7 +97,10 @@ func UpgradeGerrit() error {
 func RunGerrit() error {
 	cmd, err := PodmanRunGerrit(false, "/home/gerrit/run",
 		"--hostname", *hostname,
+		"--review-domain", *reviewDomain,
+		"--bug-domain", *bugDomain,
 		"--http-bind", *bindIP,
+		"--http-port", *bindPort,
 		"--ssh-listen", *gerritSSHAddr)
 	if err != nil {
 		return fmt.Errorf("failed to start Gerrit: %v", err)

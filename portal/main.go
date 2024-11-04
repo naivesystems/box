@@ -11,12 +11,22 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 )
 
 var workdir = flag.String("workdir", "", "Absolute path to the working directory")
-var hostname = flag.String("hostname", "nsbox.local", "")
+var hostname = flag.String("hostname", "nsbox.internal", "")
+var loginDomain = flag.String("login_domain", "login.nsbox.internal", "")
+var portalDomain = flag.String("portal_domain", "portal.nsbox.internal", "")
+var bugDomain = flag.String("bug_domain", "bug.nsbox.internal", "")
+var buildDomain = flag.String("build_domain", "build.nsbox.internal", "")
+var reviewDomain = flag.String("review_domain", "review.nsbox.internal", "")
+var mailDomain = flag.String("mail_domain", "mailpit.nsbox.internal", "")
+var crossDomain = flag.String("cross_domain", "x.nsbox.internal", "")
+
+var bindPort = flag.String("port", "9443", "Port behind httpd reverse proxy")
 var bindIP = flag.String("bind", "127.0.0.1", "Address behind httpd reverse proxy")
 var DefaultReleaseTag = "dev"
 var releaseTag = flag.String("release_tag", DefaultReleaseTag, "Release tag for images")
@@ -36,13 +46,20 @@ func main() {
 	if *hostname == "" {
 		log.Fatalln("-hostname must be specified")
 	}
+	port, err := strconv.Atoi(*bindPort)
+	if err != nil {
+		log.Fatalln("-port must be integer")
+	}
+	if port <= 0 || port > 65535 {
+		log.Fatalln("-port should be 1~65535")
+	}
 	if *enableTelemetry {
 		sendTelemetry()
 	}
 	PrepareCerts()
 	StartKeycloak()
 
-	err := StartMailpit()
+	err = StartMailpit()
 	if err != nil {
 		log.Printf("Failed to start Mailpit: %v", err)
 		StopKeycloak()
@@ -204,7 +221,7 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add user to Gerrit (idempotent operation)
-	err = AddGerritUser(username, firstName+" "+lastName, username+"@nsbox.local")
+	err = AddGerritUser(username, firstName+" "+lastName, username+"@"+*hostname)
 	if err != nil {
 		http.Error(w, "Failed to add user to Gerrit: "+err.Error(), http.StatusInternalServerError)
 		return

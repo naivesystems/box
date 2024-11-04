@@ -6,7 +6,9 @@ set -o pipefail
 
 run() {
     local bindIP="127.0.0.1"
-    local hostname="nsbox.local"
+    local hostname="nsbox.internal"
+    local bugDomain="bug.nsbox.internal"
+    local httpBindPort="9443"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -20,6 +22,16 @@ run() {
                 echo "Using hostname $1 instead of $hostname"
                 hostname="$1"
                 ;;
+            "--bug-domain")
+                shift
+                echo "Using domain $1 instead of $bugDomain"
+                bugDomain="$1"
+                ;;
+            "--http-port")
+                shift
+                echo "Using HTTP bind port $1 instead of $httpBindPort"
+                httpBindPort="$1"
+                ;;
             *)
                 echo "Invalid option: $1" >&2
                 exit 1
@@ -30,7 +42,7 @@ run() {
 
     cd "$HOME/redmine"
     cp data/secret_token.rb config/initializers/
-    ruby "$HOME/update_settings.rb" --hostname "$hostname"
+    ruby "$HOME/update_settings.rb" --hostname "$hostname" --bug-domain "$bugDomain" --http-port "$httpBindPort"
     exec bundle exec rails server -e production --log-to-stdout -u puma \
         -b "$bindIP" -p 3000
 }
